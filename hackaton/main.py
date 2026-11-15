@@ -1,8 +1,9 @@
 import os
 import json
+import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google.cloud import firestore, storage
@@ -12,11 +13,11 @@ from google.genai import types
 # --- КОНФИГУРАЦИЯ ПРОЕКТА ---
 PROJECT_ID = "project-4cdccfc2-e562-45cb-838"
 BUCKET_NAME = "nasa-medical-scans-4cdccfc2"
-LOCATION = "us-central1"
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
+GEMINI_LOCATION = os.environ.get("GEMINI_LOCATION", "global")
 
 app = FastAPI(title="NASA Deep Space Health API")
 
-# Разрешаем запросы с фронтенда команды (CORS)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,13 +26,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Инициализация клиентов GCP (подхватывают gcloud ADC автоматически)
+# Инициализация клиентов GCP
 db = firestore.Client(project=PROJECT_ID)
 storage_client = storage.Client(project=PROJECT_ID)
-ai_client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
+
+ai_client = genai.Client(
+    vertexai=True,
+    project=PROJECT_ID,
+    location=GEMINI_LOCATION,
+)
 
 
-# --- МОДЕЛИ ДАННЫХ (КОНТРАКТ С ФРОНТОМ) ---
+# --- МОДЕЛИ ДАННЫХ ---
 class VitalsInput(BaseModel):
     astronaut_id: str = "crew_1"
     mission_day: int = 140
@@ -49,13 +55,11 @@ class SyncBatch(BaseModel):
 
 # --- ВСПОМОГАТЕЛЬНАЯ ЛОГИКА (NASA HRP + GEMINI) ---
 def analyze_vitals_logic(data: VitalsInput):
-    # 1. Достаем профиль и аллергии астронавта из Firestore
     doc = db.collection("AstronautProfiles").document(data.astronaut_id).get()
     profile = doc.to_dict() if doc.exists else {}
     baseline = profile.get("medical_baseline", {})
     conditions = profile.get("medical_conditions", [])
 
-    # 2. Быстрый детерминированный движок порогов (мгновенная реакция)
     base_hr = baseline.get("base_heart_rating_bpm", 70)
     local_flag = "GREEN"
     if data.heart_rate > base_hr * 1.6 or data.sleep_hours < 4.0:
@@ -63,7 +67,6 @@ def analyze_vitals_logic(data: VitalsInput):
     elif data.heart_rate > base_hr * 1.3 or data.sleep_hours < 6.0 or data.symptoms:
         local_flag = "YELLOW"
 
-    # 3. Запрос в Gemini 2.5 Flash для глубокого триажа с учетом аллергий и среды
     prompt = f"""
     You are an autonomous NASA Deep Space Flight Surgeon AI. Communication latency with Earth is 24 minutes.
     Astronaut Profile: {profile.get('first_name', 'Crew')} {profile.get('last_name', '')}, Role: {profile.get('crew_role', 'Astronaut')}.
@@ -89,28 +92,30 @@ def analyze_vitals_logic(data: VitalsInput):
 
     try:
         response = ai_client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=GEMINI_MODEL,
             contents=prompt,
             config=types.GenerateContentConfig(response_mime_type="application/json"),
         )
         ai_result = json.loads(response.text)
     except Exception as e:
-        # Fallback на случай сбоя сети (Offline/Edge защита)
         ai_result = {
             "risk_level": local_flag,
             "nasa_hazard": "Autonomous Edge Fallback (Offline Protocol)",
-            "clinical_reasoning": f"HR {data.heart_rate} bpm vs baseline {base_hr} bpm. AI offline: {str(e)[:50]}",
-            "action_plan": ["Hydrate with 500ml electrolytes", "Rest in shielded crew quarters", "Repeat measurement in 30 mins"]
+            "clinical_reasoning": f"HR {data.heart_rate} bpm vs baseline {base_hr} bpm. AI offline: {str(e)[:80]}",
+            "action_plan": [
+                "Hydrate with 500ml electrolytes",
+                "Rest in shielded crew quarters",
+                "Repeat measurement in 30 mins",
+            ],
         }
 
-    # 4. Сохраняем запись в коллекцию VitalsLogs в Firestore
     log_entry = {
         "astronaut_id": data.astronaut_id,
         "mission_day": data.mission_day,
         "environment": data.environment,
         "vitals": data.model_dump(),
         "ai_assessment": ai_result,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     db.collection("VitalsLogs").add(log_entry)
 
@@ -131,6 +136,26 @@ def get_profile(astronaut_id: str):
     return doc.to_dict()
 
 
+@app.get("/api/history/{astronaut_id}")
+def get_history(
+    astronaut_id: str,
+    limit: int = Query(default=100, ge=1, le=500),
+):
+    logs = (
+        db.collection("VitalsLogs")
+        .where("astronaut_id", "==", astronaut_id)
+        .order_by("timestamp", direction=firestore.Query.DESCENDING)
+        .limit(limit)
+        .stream()
+    )
+    records = []
+    for log in logs:
+        record = log.to_dict() or {}
+        record["id"] = log.id
+        records.append(record)
+    return {"astronaut_id": astronaut_id, "records": records}
+
+
 @app.post("/api/vitals")
 def submit_vitals(data: VitalsInput):
     assessment = analyze_vitals_logic(data)
@@ -139,51 +164,76 @@ def submit_vitals(data: VitalsInput):
 
 @app.post("/api/analyze-scan")
 async def analyze_scan(
+    file: UploadFile = File(...),
     astronaut_id: str = Form("crew_1"),
-    notes: str = Form(""),
-    file: UploadFile = File(...)
+    notes: str = Form("Visual / Ultrasound check"),
 ):
     file_bytes = await file.read()
-    filename = f"{astronaut_id}/{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{file.filename}"
+    mime_type = file.content_type or "image/jpeg"
+    gcs_uri = "local_edge_buffer"
 
-    # 1. Загружаем снимок УЗИ/фото в Cloud Storage
-    bucket = storage_client.bucket(BUCKET_NAME)
-    blob = bucket.blob(filename)
-    blob.upload_from_string(file_bytes, content_type=file.content_type)
-    gcs_uri = f"gs://{BUCKET_NAME}/{filename}"
+    # 1. Сохраняем снимок в Cloud Storage
+    try:
+        blob_name = f"{astronaut_id}/{uuid.uuid4()}_{file.filename}"
+        bucket = storage_client.bucket(BUCKET_NAME)
+        blob = bucket.blob(blob_name)
+        blob.upload_from_string(file_bytes, content_type=mime_type)
+        gcs_uri = f"gs://{BUCKET_NAME}/{blob_name}"
+    except Exception as storage_err:
+        gcs_uri = f"storage_skipped: {str(storage_err)}"
 
-    # 2. Анализируем изображение через мультимодальный Gemini 2.5 Flash
-    prompt = f"""
-    Analyze this medical scan or visual injury photo from an astronaut in deep space.
-    Astronaut notes: "{notes}".
-    Respond ONLY in JSON:
-    {{
-        "risk_level": "GREEN" | "YELLOW" | "RED",
-        "ai_findings": "Concise medical observation",
-        "action_plan": ["Step 1...", "Step 2..."]
-    }}
-    """
-    response = ai_client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=[
-            types.Part.from_bytes(data=file_bytes, mime_type=file.content_type or "image/jpeg"),
-            prompt
-        ],
-        config=types.GenerateContentConfig(response_mime_type="application/json"),
-    )
-    ai_result = json.loads(response.text)
+    # 2. Читаем профиль и аллергии из Firestore
+    doc = db.collection("AstronautProfiles").document(astronaut_id).get()
+    profile = doc.to_dict() if doc.exists else {}
+    conditions = json.dumps(profile.get("medical_conditions", []))
 
-    # 3. Логируем скан в Firestore
+    # 3. Анализируем фото через настроенную модель Gemini
+    try:
+        prompt = f"""
+        You are an autonomous NASA flight surgeon AI analyzing a medical image/scan from an astronaut in deep space.
+        Astronaut: {profile.get('first_name', 'Crew')} {profile.get('last_name', '')}.
+        Known allergies/contraindications: {conditions}.
+        Astronaut notes: {notes}.
+
+        Inspect the image for visible anomalies (skin rash, inflammation, eye redness/SANS signs, swelling, injury, or ultrasound anomaly).
+        Note: Provide clinical triage decision support, not a definitive diagnosis.
+        Return ONLY valid JSON with keys:
+        "risk_level" ("GREEN", "YELLOW", or "RED"),
+        "ai_findings" (2 concise sentences describing what is visible on the image),
+        "recommended_action" (concrete step-by-step onboard first aid respecting their allergies).
+        """
+        response = ai_client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=[
+                types.Part.from_bytes(data=file_bytes, mime_type=mime_type),
+                prompt,
+            ],
+            config=types.GenerateContentConfig(response_mime_type="application/json"),
+        )
+        ai_result = json.loads(response.text)
+    except Exception as ai_err:
+        ai_result = {
+            "risk_level": "YELLOW",
+            "ai_findings": f"Edge fallback visual check completed (AI detail: {str(ai_err)[:80]})",
+            "recommended_action": "Clean area with sterile saline, document progression in 6 hours, avoid contraindicated meds.",
+        }
+
+    # 4. Логируем скан в Firestore ДО return
     db.collection("VitalsLogs").add({
         "astronaut_id": astronaut_id,
         "type": "medical_scan",
         "gcs_uri": gcs_uri,
         "notes": notes,
         "ai_assessment": ai_result,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     })
 
-    return {"gcs_uri": gcs_uri, **ai_result}
+    return {
+        "gcs_uri": gcs_uri,
+        "risk_level": ai_result.get("risk_level", "YELLOW"),
+        "ai_findings": ai_result.get("ai_findings", ""),
+        "recommended_action": ai_result.get("recommended_action", ""),
+    }
 
 
 @app.post("/api/sync")

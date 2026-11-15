@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Google Cloud credentials and private keys
+application_default_credentials.json
+credentials.json
+service-account*.json
+service_account*.json
+*serviceAccount*.json
+*service-account*.json
+*service_account*.json
+*-service-account*.json
+*-key.json
+*_key.json
+client_secret*.json
+key.json
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Test and editor artifacts
+.pytest_cache/
+.coverage
+.vscode/
