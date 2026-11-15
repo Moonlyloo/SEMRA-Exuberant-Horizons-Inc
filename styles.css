@@ -895,6 +895,82 @@ select {
   }
 }
 
+.dash-scan-panel {
+  flex: 0 0 auto;
+  margin-top: 1.25rem;
+  padding: 1.25rem;
+  color: #e2e8f0;
+  background: #0b1d2b;
+  border: 1px solid #1e4960;
+  border-radius: 0.75rem;
+}
+
+.dash-scan-panel .dash-box-heading {
+  margin: 0;
+}
+
+.dash-scan-form {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(240px, 2fr) auto;
+  align-items: end;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.dash-scan-field {
+  display: grid;
+  gap: 0.35rem;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+.dash-scan-field input {
+  width: 100%;
+  min-height: 2.35rem;
+  padding: 0.4rem 0.55rem;
+  color: #0f172a;
+  background: #fff;
+  border: 1px solid #94a3b8;
+  border-radius: 0.25rem;
+}
+
+.dash-scan-button {
+  min-height: 2.35rem;
+  padding: 0.45rem 0.9rem;
+  color: #fff;
+  background: #155b79;
+  border: 1px solid #39718e;
+  border-radius: 0.35rem;
+  cursor: pointer;
+}
+
+.dash-scan-button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.dash-scan-status {
+  margin: 0.75rem 0 0;
+  color: #cbd5e1;
+}
+
+.dash-scan-result {
+  margin-top: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: #102b3b;
+  border-left: 3px solid #38bdf8;
+  overflow-wrap: anywhere;
+}
+
+.dash-scan-result h3,
+.dash-scan-result p {
+  margin: 0 0 0.5rem;
+}
+
+.dash-scan-result p:last-child {
+  margin-bottom: 0;
+}
+
 .dash-topbar {
   width: 100%;
   min-height: 52px;
@@ -2261,6 +2337,10 @@ select {
   .dash-groundcontrol {
     height: auto;
     padding: 1rem 0 0;
+  }
+
+  .dash-scan-form {
+    grid-template-columns: 1fr;
   }
 
   .dash-gc-layout {

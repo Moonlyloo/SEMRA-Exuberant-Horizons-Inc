@@ -16,10 +16,11 @@ root) represents the astronaut client on the cabin LAN. It provides cached
 crew information, local threshold-based triage, a LocalStorage queue named
 `offline_vitals_queue`. The dashboard has been restored to its pre-health-link
 layout and no longer exposes the health-link panel, online/offline controls,
-vitals submission, scan analysis, or API history. The client-side API and
-offline-sync logic remains in `app.js`. The onboard LAN is modeled as a 0 ms
-boundary; the current web demo calls the Cloud Run API directly when connected
-rather than hosting a separate onboard server.
+vitals submission, or API history. A dedicated **Medical Scan Analysis**
+card remains on the dashboard for image upload and AI review. The client-side
+API and offline-sync logic remains in `app.js`. The onboard LAN is modeled as
+a 0 ms boundary; the current web demo calls the Cloud Run API directly when
+connected rather than hosting a separate onboard server.
 
 The installable web-app shell is described by `manifest.json`; `sw.js` caches
 only same-origin frontend assets and does not intercept or cache Cloud Run API

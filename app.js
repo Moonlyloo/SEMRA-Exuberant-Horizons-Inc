@@ -9998,6 +9998,62 @@
                 )
               )
             ),
+        !alertActive && !diagnosticActive && activeTab === "dashboard"
+          ? h(
+              "section",
+              { className: "dash-scan-panel", "aria-labelledby": "dash-scan-title" },
+              h("h2", { id: "dash-scan-title", className: "dash-box-heading" }, "Medical Scan Analysis"),
+              h(
+                "form",
+                { className: "dash-scan-form", onSubmit: handleAnalyzeScan },
+                h(
+                  "label",
+                  { className: "dash-scan-field" },
+                  h("span", null, "Medical image"),
+                  h("input", {
+                    type: "file",
+                    accept: "image/*",
+                    required: true,
+                    onChange: function (event) {
+                      setScanFile(event.target.files && event.target.files[0] ? event.target.files[0] : null);
+                    },
+                  })
+                ),
+                h(
+                  "label",
+                  { className: "dash-scan-field" },
+                  h("span", null, "Clinical notes (optional)"),
+                  h("input", {
+                    type: "text",
+                    value: scanNotes,
+                    onChange: function (event) {
+                      setScanNotes(event.target.value);
+                    },
+                  })
+                ),
+                h(
+                  "button",
+                  {
+                    type: "submit",
+                    className: "dash-scan-button",
+                    disabled: isAnalyzingScan,
+                  },
+                  isAnalyzingScan ? "Analyzing..." : "Analyze Scan"
+                )
+              ),
+              apiStatus ? h("p", { className: "dash-scan-status", role: "status" }, apiStatus) : null,
+              scanResult
+                ? h(
+                    "div",
+                    { className: "dash-scan-result", "aria-live": "polite" },
+                    h("h3", null, "Scan: " + scanResult.risk_level),
+                    h("p", null, scanResult.ai_findings),
+                    h("p", null, scanResult.recommended_action),
+                    h("p", null, scanResult.gcs_uri)
+                  )
+                : null
+            )
+          : null,
         !alertActive
           ? h(
               "div",
