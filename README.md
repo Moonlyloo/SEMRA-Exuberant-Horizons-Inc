@@ -1,78 +1,88 @@
 # NASA Deep Space Health System
 
-A hackathon prototype for astronaut health monitoring, offline telemetry
-capture, and onboard triage during delayed Earth communications.
+A hackathon prototype for astronaut health monitoring, medical image review,
+and onboard triage during delayed communications with Earth.
 
-> **Safety notice:** This is a decision-support demonstration, not a medical
-> device or a substitute for a qualified flight surgeon. Demo with synthetic
+> **Safety notice:** This project is a decision-support demonstration, not a
+> medical device or a substitute for a qualified flight surgeon. Use synthetic
 > data only. Do not upload real patient records or medical images.
 
 ## Architecture
 
 ### Onboard spacecraft segment
 
-The browser app (`index.html`, `app.js`, and `styles.css` in the repository
-root) represents the astronaut client on the cabin LAN. It provides cached
-crew information, local threshold-based triage, a LocalStorage queue named
-`offline_vitals_queue`. The dashboard has been restored to its pre-health-link
-layout and no longer exposes the health-link panel, online/offline controls,
-vitals submission, or API history. A dedicated **Medical Scan Analysis**
-card remains on the dashboard for image upload and AI review. The client-side
-API and offline-sync logic remains in `app.js`. The onboard LAN is modeled as
-a 0 ms boundary; the current web demo calls the Cloud Run API directly when
-connected rather than hosting a separate onboard server.
+The browser app consists of `index.html`, `app.js`, and `styles.css` in the
+repository root. It represents an astronaut client on the cabin LAN and
+includes local threshold-based triage logic and a LocalStorage queue named
+`offline_vitals_queue`.
 
-The installable web-app shell is described by `manifest.json`; `sw.js` caches
-only same-origin frontend assets and does not intercept or cache Cloud Run API
-responses. The local CSS, JavaScript, and worker URLs carry a matching release
-version so browsers can refresh stale assets after deployment; increment the
-version when updating those files. In local browser verification, the
-service-worker registration remained inactive and created no cache, so
-app-shell offline behavior is not confirmed.
+The dashboard currently provides a **Medical Scan Analysis** card for image
+uploads and AI review, a **36-item Measurements** catalogue, and a **Warning
+Log** with search, filters, and per-event analysis. The Measurements catalogue,
+sample warning history, and alert cascades are simulated browser-side data;
+they are not clinical records in Firestore.
 
-The dashboard also includes a 36-item **Measurements** catalogue and a
-**Warning Log** with search, filters, and per-event analysis. Catalogue
-simulations, sample warning history, and alert cascades are labeled as
-simulated and stored in browser-local state; they are not clinical records in
-Firestore. Live profile/history data and submitted vitals continue to use the
-Cloud Run API described below.
+The client retains Cloud Run integrations for profile and history requests,
+vitals submission, scan analysis, and queued batch sync. The current dashboard
+does not display the health-link panel, vitals-submission form, queue controls,
+or API history table. It listens for browser online/offline events and retains
+the local queue/sync logic in `app.js`.
 
-### DSN latency boundary
+The web demo calls the Cloud Run API directly when connected. The onboard LAN
+is modeled as a 0 ms boundary, but a separate onboard API server is not
+implemented in this prototype.
 
-The system models a **20–45 minute** Deep Space Network store-and-forward
-interval. Client code can queue vitals locally when offline and post them to
-`/api/sync` on reconnection, but the dashboard no longer exposes those
-controls. Clinical updates and baselines should flow from Ground Mission
-Control to an onboard server over the DSN; the onboard server should then
-serve them to the client over the cabin LAN. That ground-to-onboard feedback
-path is an architectural boundary, not a separate service implemented in
-this demo.
+### Deep Space Network latency boundary
+
+The architecture models a simulated **20–45 minute** Deep Space Network (DSN)
+store-and-forward interval. When the browser is offline or a vitals request
+cannot reach the API, client code can queue the payload in LocalStorage and
+sync queued records through `/api/sync` when connectivity returns. The current
+dashboard does not expose a manual connection toggle or queue indicator.
+
+In the intended feedback path, Ground Mission Control sends clinical updates
+and baselines to an onboard server over the DSN; the onboard server then
+serves them to the astronaut client over the cabin LAN. This is an
+architectural boundary, not a separate service implemented in this demo.
 
 ### Earth and cloud segment
 
 - **API:** FastAPI on Google Cloud Run.
 - **Database:** Cloud Firestore collections `AstronautProfiles` and
   `VitalsLogs`.
-- **Medical images:** Google Cloud Storage bucket
+- **Medical image storage:** Google Cloud Storage bucket
   `gs://nasa-medical-scans-4cdccfc2`.
-- **Multimodal analysis:** Vertex AI Gemini `gemini-3.5-flash-lite`.
-- **Cloud credentials:** Google Cloud credentials belong to the backend
-  runtime. Never place service-account credentials in browser code.
+- **Multimodal analysis:** Vertex AI using `gemini-3.5-flash-lite` by default.
+- **Credentials:** Google Cloud credentials belong in the backend runtime;
+  never put service-account keys in browser code.
 
-The backend uses its configured Google Cloud identity for Firestore, Storage,
-and Vertex AI. Browser access also depends on the Cloud Run service's invoke
-policy and its CORS configuration; CORS is permissive in the current
-prototype and should be restricted before production use.
+The backend uses its configured Google Cloud identity for Firestore, Cloud
+Storage, and Vertex AI. The current backend CORS configuration allows all
+origins and should be restricted before production use.
+
+### Web app shell and offline limitations
+
+The installable web-app shell is described by `manifest.json`. `sw.js` is
+configured to cache same-origin frontend assets and does not intercept or
+cache Cloud Run API responses. The service worker and cache are versioned;
+increment the matching asset query versions in `index.html` and the cache name
+in `sw.js` when publishing updated frontend assets.
+
+Offline shell caching depends on browser support and successful service-worker
+installation. React 18 is loaded from a CDN and is not included in the
+service-worker cache, so an internet connection is required to load React on a
+fresh visit.
 
 ## Production API
 
 **Base URL:** <https://space-health-api-1007338674559.us-central1.run.app>
 
-**Interactive docs:** <https://space-health-api-1007338674559.us-central1.run.app/docs>
+**Interactive API documentation:**
+<https://space-health-api-1007338674559.us-central1.run.app/docs>
 
-The populated demo astronaut is `crew_1` (Elena Rostova). The browser maps
-telemetry and scan requests to that demo ID so the existing UI crew selector
-does not accidentally query an unseeded profile.
+The populated demo astronaut is `crew_1` (Elena Rostova). The client maps
+telemetry and scan requests to this ID so they use the seeded demo profile.
+The profile includes a Penicillin allergy and Ibuprofen gastric intolerance.
 
 ### `GET /api/profile/{astronaut_id}`
 
@@ -80,10 +90,9 @@ does not accidentally query an unseeded profile.
 GET /api/profile/crew_1
 ```
 
-Returns the profile, including `medical_baseline` and
-`medical_conditions`. The demo profile includes a Penicillin allergy and
-Ibuprofen gastric intolerance. The endpoint returns `404` when a profile is
-not found.
+Returns the astronaut profile, including `medical_baseline` and
+`medical_conditions`. The endpoint returns `404` if the profile does not
+exist.
 
 ### `GET /api/history/{astronaut_id}?limit=50`
 
@@ -91,14 +100,15 @@ not found.
 GET /api/history/crew_1?limit=50
 ```
 
-Returns `{ "astronaut_id": "crew_1", "records": [...] }`, newest record first.
-The dashboard keeps that order in its log table and reverses a copy for its
-chronological heart-rate chart. The backend accepts a `limit` from 1 to 500.
+Returns `{ "astronaut_id": "crew_1", "records": [...] }`, sorted newest first.
+The backend default limit is 100; valid limits range from 1 to 500. When
+plotting a chronological time series, reverse a copy of the returned array so
+the original newest-first order remains available for logs.
 
 ### `POST /api/vitals`
 
-Send JSON with numeric values for `mission_day`, `heart_rate`, `sleep_hours`,
-and `exercise_min`:
+Send JSON. `mission_day`, `heart_rate`, `sleep_hours`, and `exercise_min` must
+be numeric values:
 
 ```json
 {
@@ -113,14 +123,14 @@ and `exercise_min`:
 }
 ```
 
-The response contains `risk_level`, `nasa_hazard`, `clinical_reasoning`, and
-`action_plan` (and currently includes a `sync_status` field).
+The response includes `risk_level`, `nasa_hazard`, `clinical_reasoning`,
+`action_plan`, and `sync_status`.
 
 ### `POST /api/analyze-scan`
 
-Send `multipart/form-data` containing `file`, `astronaut_id`, and `notes`.
-Do not set the multipart `Content-Type` header manually; the browser must add
-the boundary.
+Send `multipart/form-data` containing `file`, `astronaut_id`, and `notes`. Do
+not set the multipart `Content-Type` header manually; the browser must add the
+boundary.
 
 ```sh
 curl -X POST "https://space-health-api-1007338674559.us-central1.run.app/api/analyze-scan" \
@@ -129,7 +139,8 @@ curl -X POST "https://space-health-api-1007338674559.us-central1.run.app/api/ana
   -F "notes=Synthetic demo image"
 ```
 
-Returns `gcs_uri`, `risk_level`, `ai_findings`, and `recommended_action`.
+The response includes `gcs_uri`, `risk_level`, `ai_findings`, and
+`recommended_action`.
 
 ### `POST /api/sync`
 
@@ -152,15 +163,15 @@ Send a JSON batch using the same numeric vitals schema as `/api/vitals`:
 }
 ```
 
-Returns a batch result with `synced_count`, `status`, and per-record
-assessments. The web app clears queued entries after a successful response
-and then fetches the latest history.
+The response includes `synced_count`, `status`, and per-record assessments.
+After a successful sync, the client clears the queued entries and requests
+the latest history.
 
 ## Run locally
 
 ### Frontend
 
-From the repository root, run either:
+From the repository root, start a static server with either command:
 
 ```sh
 python -m http.server 8080
@@ -172,28 +183,30 @@ or:
 npx serve .
 ```
 
-Then open <http://localhost:8080>. React 18 is loaded from a CDN, so the page
-requires network access to load React even when the API connection is toggled
-offline. The service worker is configured to cache the local app shell, but
-its activation was not observed during verification. It does not cache
-clinical API responses or make the CDN-hosted React runtime available offline.
+Then open <http://localhost:8080>. The page loads React 18 from a CDN, so an
+internet connection is required for a fresh visit.
 
 ### Backend
 
-The FastAPI source is in `hackaton/`. Install dependencies from the repository
-root, authenticate with Google Cloud Application Default Credentials, and
-start the local server:
+The FastAPI source is in `hackaton/`. From the repository root, install the
+dependencies and authenticate with Google Cloud Application Default
+Credentials:
 
 ```sh
 python -m pip install -r hackaton/requirements.txt
 gcloud auth application-default login
+```
+
+Then start the API:
+
+```sh
 cd hackaton
 uvicorn main:app --reload --port 8000
 ```
 
-The backend uses the configured Google Cloud project, Firestore, bucket, and
-Vertex AI model. Ensure the local identity has the required permissions. Do
-not commit credential files.
+The backend uses its configured Google Cloud project, Firestore database,
+Storage bucket, and Vertex AI model. Ensure the local identity has the
+required permissions. Do not commit credential files.
 
 ## Repository layout
 
@@ -226,8 +239,8 @@ not commit credential files.
 
 ## Demo data
 
-`seed_demo_data.py` is an optional Firestore utility. It asks for confirmation,
+`seed_demo_data.py` is an optional Firestore utility. It requests confirmation,
 deletes only recognized fallback logs for `crew_1`, and upserts synthetic
-mission-day records. It is not run by the API or deployment. Review the
-script and its confirmation prompt before using it; seeded assessments are
-synthetic demo data, not clinical advice.
+mission-day records. It is not run by the API or frontend deployment. Review
+the script and its confirmation prompt before using it. Seeded assessments
+are synthetic demo data, not clinical advice.
