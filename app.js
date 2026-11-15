@@ -8096,7 +8096,13 @@
 
     return h(
       "div",
-      { className: "dash-page" },
+      {
+        className:
+          "dash-page" +
+          (activeTab === "dashboard" && !alertActive && !diagnosticActive
+            ? " dash-page--dashboard"
+            : ""),
+      },
       h(
         "header",
         { className: "dash-topbar" },

@@ -851,6 +851,50 @@ select {
   color: #111827;
 }
 
+@media (min-width: 1061px) {
+  .dash-page--dashboard {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .dash-page--dashboard .dash-workspace {
+    flex: 1 0 auto;
+    min-height: auto;
+  }
+
+  .dash-page--dashboard .dash-main {
+    height: auto;
+    min-height: calc(100vh - 52px - 2.8rem);
+  }
+
+  .dash-page--dashboard .dash-col-left,
+  .dash-page--dashboard .dash-col-center,
+  .dash-page--dashboard .dash-col-right {
+    height: auto;
+  }
+
+  .dash-page--dashboard .dash-tasks-box {
+    flex: 0 0 auto;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .dash-page--dashboard .dash-col-right {
+    padding-bottom: 0;
+  }
+
+  .dash-page--dashboard .dash-part-inspector {
+    overflow: visible;
+  }
+
+  .dash-page--dashboard .dash-bottom-actions {
+    position: static;
+    align-self: flex-end;
+    margin-top: 1rem;
+  }
+}
+
 .dash-topbar {
   width: 100%;
   min-height: 52px;
