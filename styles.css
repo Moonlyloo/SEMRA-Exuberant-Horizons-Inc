@@ -2310,6 +2310,26 @@ select {
 
   .dash-topbar {
     height: auto;
+    flex-direction: column;
+  }
+
+  .dash-nav {
+    flex-wrap: wrap;
+  }
+
+  .dash-nav-cap {
+    display: none;
+  }
+
+  .dash-nav-tab {
+    flex: 1 1 18%;
+    min-width: 0;
+    padding: 0.7rem 0.55rem;
+  }
+
+  .dash-topbar-right {
+    justify-content: space-between;
+    border-top: 1px solid #0d3b4f;
   }
 
   .dash-main {
@@ -2406,8 +2426,9 @@ select {
   }
 }
 
-@media (max-width: 720px) {
+@media (min-width: 1061px) and (max-width: 1180px) {
   .dash-topbar {
+    height: auto;
     flex-direction: column;
   }
 
@@ -2420,8 +2441,54 @@ select {
   }
 
   .dash-nav-tab {
-    flex: 1;
-    padding: 0.65rem 0.75rem;
+    flex: 1 1 18%;
+    min-width: 0;
+    padding: 0.7rem 0.55rem;
+  }
+
+  .dash-topbar-right {
+    justify-content: flex-end;
+    border-top: 1px solid #0d3b4f;
+  }
+
+  .dash-page--dashboard .dash-main {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .dash-page--dashboard .dash-col-center {
+    grid-column: 1 / -1;
+    order: -1;
+    min-height: 28rem;
+  }
+
+  .dash-page--dashboard .dash-col-left,
+  .dash-page--dashboard .dash-col-right {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .dash-topbar {
+    flex-direction: column;
+  }
+
+  .dash-workspace {
+    padding: 1rem 0.85rem;
+  }
+
+  .dash-nav {
+    flex-wrap: wrap;
+  }
+
+  .dash-nav-cap {
+    display: none;
+  }
+
+  .dash-nav-tab {
+    flex: 1 1 30%;
+    min-width: 0;
+    padding: 0.65rem 0.4rem;
     font-size: var(--fs-sm);
   }
 
@@ -2441,6 +2508,17 @@ select {
     padding: 0.55rem 1rem;
     border-top: none;
     font-size: var(--fs-sm);
+    white-space: normal;
+    text-align: right;
+  }
+
+  .dash-scan-panel {
+    padding: 0.9rem;
+  }
+
+  .dash-log-entry {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .dash-left-top,
