@@ -1,166 +1,108 @@
 # NASA Deep Space Health System
 
-A hackathon prototype for astronaut health monitoring and onboard triage when
-Earth is too far away for real-time support.
+A hackathon prototype for astronaut health monitoring, offline telemetry
+capture, and onboard triage during delayed Earth communications.
 
-> **Demo notice:** This is a decision-support prototype, not a medical device or
-> a substitute for clinical judgment. Use synthetic data for demos; do not send
-> real patient data to the public demo service.
-
-## The problem
-
-During an Earth-to-Mars mission, one-way communications can take about 24
-minutes. A crew cannot wait for Earth to review every change in vital signs.
-The system records telemetry, produces a rapid local-rule fallback if Gemini
-is unavailable, and uses Gemini to provide structured triage assistance when
-the cloud service is reachable.
+> **Safety notice:** This is a decision-support demonstration, not a medical
+> device or a substitute for a qualified flight surgeon. Demo with synthetic
+> data only. Do not upload real patient records or medical images.
 
 ## Architecture
 
-- **API:** FastAPI in `hackaton/main.py`, deployed to Google Cloud Run.
-- **Persistence:** Cloud Firestore collections `AstronautProfiles` and
+### Onboard spacecraft segment
+
+The browser app (`index.html`, `app.js`, and `styles.css` in the repository
+root) represents the astronaut client on the cabin LAN. It provides cached
+crew information, local threshold-based triage, a LocalStorage queue named
+`offline_vitals_queue`, and online/offline controls. The onboard LAN is modeled
+as a 0 ms boundary; the current web demo calls the Cloud Run API directly when
+connected rather than hosting a separate onboard server.
+
+### DSN latency boundary
+
+The dashboard displays a simulated **20–45 minute** Deep Space Network
+store-and-forward interval. When the browser is offline or the API request
+cannot be reached, vitals are queued locally and can be triaged onboard. On
+reconnection, the client posts queued records to `/api/sync` and refreshes the
+history. Clinical updates and baselines should flow from Ground Mission
+Control to an onboard server over the DSN; the onboard server should then
+serve them to the client over the cabin LAN. That ground-to-onboard feedback
+path is an architectural boundary, not a separate service implemented in
+this demo.
+
+### Earth and cloud segment
+
+- **API:** FastAPI on Google Cloud Run.
+- **Database:** Cloud Firestore collections `AstronautProfiles` and
   `VitalsLogs`.
-- **Images:** Cloud Storage bucket `nasa-medical-scans-4cdccfc2`.
-- **AI:** Vertex AI through the Google Gen AI SDK, using
-  `gemini-3.5-flash-lite` at the `global` endpoint by default.
-- **Authentication:** Cloud Run uses its runtime service account and native
-  Google Cloud IAM/ADC. No API key is needed in the application or browser.
-- **Frontend:** `astronaut-health-system/` is a static UI prototype. It is not
-  yet wired to these FastAPI endpoints; use the live API base URL below when
-  integrating it.
+- **Medical images:** Google Cloud Storage bucket
+  `gs://nasa-medical-scans-4cdccfc2`.
+- **Multimodal analysis:** Vertex AI Gemini `gemini-3.5-flash-lite`.
+- **Cloud credentials:** Google Cloud credentials belong to the backend
+  runtime. Never place service-account credentials in browser code.
 
-The model and location can be overridden with `GEMINI_MODEL` and
-`GEMINI_LOCATION`. The API has a local threshold-based fallback for vitals and
-a separate fallback response for scan analysis. A successful HTTP response
-alone does not prove Gemini ran; see the fallback markers below.
+The backend uses its configured Google Cloud identity for Firestore, Storage,
+and Vertex AI. Browser access also depends on the Cloud Run service's invoke
+policy and its CORS configuration; CORS is permissive in the current
+prototype and should be restricted before production use.
 
-## Live API
+## Production API
 
 **Base URL:** <https://space-health-api-1007338674559.us-central1.run.app>
 
-Interactive API documentation: <https://space-health-api-1007338674559.us-central1.run.app/docs>
+**Interactive docs:** <https://space-health-api-1007338674559.us-central1.run.app/docs>
 
-### `GET /` — health check
+The populated demo astronaut is `crew_1` (Elena Rostova). The browser maps
+telemetry and scan requests to that demo ID so the existing UI crew selector
+does not accidentally query an unseeded profile.
 
-```http
-GET /
-```
-
-Example response:
-
-```json
-{
-  "status": "online",
-  "service": "NASA Deep Space Health Backend"
-}
-```
-
-### `GET /api/profile/{astronaut_id}` — get an astronaut profile
+### `GET /api/profile/{astronaut_id}`
 
 ```http
 GET /api/profile/crew_1
 ```
 
-Example response (fields depend on the stored profile):
+Returns the profile, including `medical_baseline` and
+`medical_conditions`. The demo profile includes a Penicillin allergy and
+Ibuprofen gastric intolerance. The endpoint returns `404` when a profile is
+not found.
 
-```json
-{
-  "astronaut_id": "crew_1",
-  "first_name": "Demo",
-  "last_name": "Crewmember",
-  "crew_role": "Flight Engineer",
-  "medical_baseline": {
-    "base_heart_rating_bpm": 62,
-    "base_blood_pressure": "115/75"
-  },
-  "medical_conditions": []
-}
-```
-
-Returns `404` if the profile does not exist.
-
-### `GET /api/history/{astronaut_id}` — get recent health logs
-
-`limit` is optional (default `100`, range `1`–`500`).
+### `GET /api/history/{astronaut_id}?limit=50`
 
 ```http
-GET /api/history/crew_1?limit=2
+GET /api/history/crew_1?limit=50
 ```
 
-Example response:
+Returns `{ "astronaut_id": "crew_1", "records": [...] }`, newest record first.
+The dashboard keeps that order in its log table and reverses a copy for its
+chronological heart-rate chart. The backend accepts a `limit` from 1 to 500.
+
+### `POST /api/vitals`
+
+Send JSON with numeric values for `mission_day`, `heart_rate`, `sleep_hours`,
+and `exercise_min`:
 
 ```json
 {
   "astronaut_id": "crew_1",
-  "records": [
-    {
-      "id": "firestore-document-id",
-      "mission_day": 140,
-      "timestamp": "2026-11-14T12:00:00+00:00",
-      "vitals": {
-        "heart_rate": 78,
-        "blood_pressure": "104/68",
-        "sleep_hours": 5.8
-      },
-      "ai_assessment": {
-        "risk_level": "YELLOW",
-        "nasa_hazard": "Microgravity Fluid Shift",
-        "clinical_reasoning": "Example triage summary.",
-        "action_plan": ["Example action."]
-      }
-    }
-  ]
+  "mission_day": 142,
+  "environment": "Microgravity / Deep Space Transit",
+  "heart_rate": 108,
+  "blood_pressure": "138/88",
+  "sleep_hours": 5.5,
+  "exercise_min": 45,
+  "symptoms": "Mild headache and visual blur"
 }
 ```
 
-### `POST /api/vitals` — submit vitals and request triage
+The response contains `risk_level`, `nasa_hazard`, `clinical_reasoning`, and
+`action_plan` (and currently includes a `sync_status` field).
 
-```http
-POST /api/vitals
-Content-Type: application/json
-```
+### `POST /api/analyze-scan`
 
-Example request:
-
-```json
-{
-  "astronaut_id": "crew_1",
-  "mission_day": 140,
-  "environment": "deep_space",
-  "heart_rate": 78,
-  "blood_pressure": "104/68",
-  "sleep_hours": 5.8,
-  "exercise_min": 25,
-  "symptoms": "Lightheadedness when standing and increased thirst"
-}
-```
-
-Example response:
-
-```json
-{
-  "risk_level": "YELLOW",
-  "nasa_hazard": "Microgravity Fluid Shift",
-  "clinical_reasoning": "Example triage summary comparing the telemetry with baseline.",
-  "action_plan": ["Example action.", "Example follow-up.", "Example monitoring step."],
-  "sync_status": "saved_to_firestore"
-}
-```
-
-Each request is saved in `VitalsLogs`. When Gemini is unavailable, the response
-can still be HTTP `200` but use
-`"nasa_hazard": "Autonomous Edge Fallback (Offline Protocol)"` and include
-`"AI offline"` in `clinical_reasoning`.
-
-### `POST /api/analyze-scan` — analyze an uploaded image
-
-Send `multipart/form-data` with:
-
-- `file` — required image file
-- `astronaut_id` — optional, defaults to `crew_1`
-- `notes` — optional context
-
-Example with curl:
+Send `multipart/form-data` containing `file`, `astronaut_id`, and `notes`.
+Do not set the multipart `Content-Type` header manually; the browser must add
+the boundary.
 
 ```sh
 curl -X POST "https://space-health-api-1007338674559.us-central1.run.app/api/analyze-scan" \
@@ -169,130 +111,100 @@ curl -X POST "https://space-health-api-1007338674559.us-central1.run.app/api/ana
   -F "notes=Synthetic demo image"
 ```
 
-Example response:
+Returns `gcs_uri`, `risk_level`, `ai_findings`, and `recommended_action`.
 
-```json
-{
-  "gcs_uri": "gs://nasa-medical-scans-4cdccfc2/crew_1/example-image.jpg",
-  "risk_level": "GREEN",
-  "ai_findings": "Example visual findings.",
-  "recommended_action": "Example next step."
-}
-```
+### `POST /api/sync`
 
-If image storage fails, `gcs_uri` can begin with `storage_skipped:` while AI
-analysis may still succeed. The scan fallback is indicated by
-`ai_findings` beginning with `Edge fallback visual check completed`.
-
-### `POST /api/sync` — submit an offline batch
-
-```http
-POST /api/sync
-Content-Type: application/json
-```
-
-Example request:
+Send a JSON batch using the same numeric vitals schema as `/api/vitals`:
 
 ```json
 {
   "records": [
     {
       "astronaut_id": "crew_1",
-      "mission_day": 139,
-      "environment": "deep_space",
-      "heart_rate": 73,
-      "blood_pressure": "110/72",
-      "sleep_hours": 6.4,
-      "exercise_min": 20,
-      "symptoms": "Mild lightheadedness when standing"
+      "mission_day": 142,
+      "environment": "Microgravity / Deep Space Transit",
+      "heart_rate": 72,
+      "blood_pressure": "120/80",
+      "sleep_hours": 7.5,
+      "exercise_min": 30,
+      "symptoms": ""
     }
   ]
 }
 ```
 
-Example response:
+Returns a batch result with `synced_count`, `status`, and per-record
+assessments. The web app clears queued entries after a successful response
+and then fetches the latest history.
 
-```json
-{
-  "synced_count": 1,
-  "status": "ok",
-  "results": [
-    {
-      "risk_level": "YELLOW",
-      "nasa_hazard": "Microgravity Fluid Shift",
-      "clinical_reasoning": "Example triage summary.",
-      "action_plan": ["Example action."]
-    }
-  ]
-}
+## Run locally
+
+### Frontend
+
+From the repository root, run either:
+
+```sh
+python -m http.server 8080
 ```
 
-## Frontend integration
+or:
 
-Use the live base URL for browser requests. For JSON endpoints, send
-`Content-Type: application/json`; for image upload, send `FormData` and let the
-browser set the multipart boundary.
-
-```js
-const API_BASE_URL = "https://space-health-api-1007338674559.us-central1.run.app";
-
-const response = await fetch(`${API_BASE_URL}/api/vitals`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    astronaut_id: "crew_1",
-    mission_day: 140,
-    environment: "deep_space",
-    heart_rate: 72,
-    blood_pressure: "120/80",
-    sleep_hours: 8,
-    exercise_min: 30,
-    symptoms: ""
-  })
-});
-
-if (!response.ok) {
-  throw new Error(`Vitals request failed: ${response.status}`);
-}
-
-const assessment = await response.json();
+```sh
+npx serve .
 ```
 
-Do not put service-account keys or other Google Cloud credentials in frontend
-code. The current backend CORS policy is permissive for the prototype and
-should be restricted to the deployed frontend origin before production use.
+Then open <http://localhost:8080>. React 18 is loaded from a CDN, so the page
+requires network access to load React even when the API connection is toggled
+offline.
 
-## Local development
+### Backend
 
-The backend uses Application Default Credentials. For local development,
-install the backend requirements and authenticate with an account that has
-access to the configured project:
+The FastAPI source is in `hackaton/`. Install dependencies from the repository
+root, authenticate with Google Cloud Application Default Credentials, and
+start the local server:
 
 ```sh
 python -m pip install -r hackaton/requirements.txt
 gcloud auth application-default login
 cd hackaton
-uvicorn main:app --reload
+uvicorn main:app --reload --port 8000
 ```
 
-Then open <http://127.0.0.1:8000/docs>. The configured project and bucket are
-declared in `hackaton/main.py`; ensure the local identity has the required
-Firestore, Storage, and Vertex AI permissions. Never commit local credential
-files.
+The backend uses the configured Google Cloud project, Firestore, bucket, and
+Vertex AI model. Ensure the local identity has the required permissions. Do
+not commit credential files.
+
+## Repository layout
+
+```text
+/
+  index.html
+  app.js
+  styles.css
+  README.md
+  seed_demo_data.py
+  hackaton/
+    main.py
+    Dockerfile
+    requirements.txt
+    firestore.indexes.json
+    seed_db.py
+```
+
+## Team
+
+- **Ibrahim Alizada — Principal AI, Systems & Security Architect:** End-to-end
+  GCP infrastructure, FastAPI backend, multimodal Vertex AI integration,
+  zero-key IAM security, and clinical safety guardrails.
+- **Domain Research & Data Lead — Lead Data Engineer & Space Medicine
+  Researcher:** NASA HRP hazard research, astronaut clinical baselines,
+  allergy profiles, and biomedical dataset structuring.
 
 ## Demo data
 
-`seed_demo_data.py` is an optional Firestore utility. When run manually, it
-asks for confirmation, deletes only recognized fallback logs for `crew_1`, and
-upserts five synthetic mission-day records that progress from GREEN baseline
-telemetry to YELLOW fluid-shift symptoms. It is **not run by the API or
-deployment**.
-
-```sh
-python -m pip install -r hackaton/requirements.txt
-gcloud auth application-default login
-python seed_demo_data.py
-```
-
-Review the project and the confirmation prompt before allowing it to modify
-Firestore. The seeded assessments are synthetic demo data, not clinical advice.
+`seed_demo_data.py` is an optional Firestore utility. It asks for confirmation,
+deletes only recognized fallback logs for `crew_1`, and upserts synthetic
+mission-day records. It is not run by the API or deployment. Review the
+script and its confirmation prompt before using it; seeded assessments are
+synthetic demo data, not clinical advice.

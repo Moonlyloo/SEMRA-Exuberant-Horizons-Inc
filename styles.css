@@ -2377,3 +2377,214 @@ select {
   }
 }
 
+.dash-api-panel {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 1.25rem;
+  color: #e2e8f0;
+  background: #0b1d2b;
+  border: 1px solid #1e4960;
+  border-radius: 0.75rem;
+}
+
+.dash-api-heading,
+.dash-api-controls,
+.dash-api-simulator {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.dash-api-heading {
+  justify-content: space-between;
+}
+
+.dash-api-heading .dash-box-heading {
+  margin: 0;
+}
+
+.dash-api-subtitle,
+.dash-api-status {
+  margin: 0.5rem 0 0;
+  color: #cbd5e1;
+}
+
+.dash-connection-badge,
+.dash-queue-badge {
+  padding: 0.4rem 0.65rem;
+  border: 1px solid #64748b;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.dash-connection-badge--online {
+  color: #bbf7d0;
+  border-color: #22c55e;
+}
+
+.dash-api-controls {
+  margin-top: 1rem;
+}
+
+.dash-api-latency {
+  color: #fcd34d;
+}
+
+.dash-api-button {
+  min-height: 2.25rem;
+  padding: 0.45rem 0.75rem;
+  color: #e2e8f0;
+  background: #17364a;
+  border: 1px solid #39718e;
+  border-radius: 0.35rem;
+  cursor: pointer;
+}
+
+.dash-api-button:hover:not(:disabled) {
+  background: #20506a;
+}
+
+.dash-api-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dash-api-button--primary {
+  color: #fff;
+  background: #155b79;
+}
+
+.dash-api-simulator {
+  margin: 1rem 0;
+}
+
+.dash-api-simulator strong {
+  margin-right: 0.25rem;
+}
+
+.dash-api-vitals-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  align-items: end;
+  gap: 0.75rem;
+  padding: 1rem 0;
+  border-top: 1px solid #1e4960;
+}
+
+.dash-api-field {
+  display: grid;
+  gap: 0.35rem;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+.dash-api-field input,
+.dash-api-scan-form input[type="text"] {
+  width: 100%;
+  min-height: 2.35rem;
+  padding: 0.4rem 0.55rem;
+  color: #0f172a;
+  background: #fff;
+  border: 1px solid #94a3b8;
+  border-radius: 0.25rem;
+}
+
+.dash-api-result {
+  margin: 0.75rem 0;
+  padding: 0.85rem 1rem;
+  background: #102b3b;
+  border-left: 3px solid #38bdf8;
+  overflow-wrap: anywhere;
+}
+
+.dash-api-result h3,
+.dash-api-result p {
+  margin: 0 0 0.5rem;
+}
+
+.dash-api-result ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.dash-api-scan-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  padding: 1rem 0;
+  border-top: 1px solid #1e4960;
+}
+
+.dash-api-scan-form h3 {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.dash-api-scan-form input[type="text"] {
+  flex: 1 1 200px;
+}
+
+.dash-api-history {
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.dash-api-history h3 {
+  margin: 0 0 0.5rem;
+}
+
+.dash-api-chart {
+  max-width: 340px;
+  margin: 0.5rem 0 1rem;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+}
+
+.dash-api-chart svg {
+  display: block;
+  width: 100%;
+  height: 100px;
+  margin-top: 0.35rem;
+  background: #081722;
+  border-radius: 0.35rem;
+}
+
+.dash-api-history-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.dash-api-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.dash-api-history-table th,
+.dash-api-history-table td {
+  padding: 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #1e4960;
+}
+
+@media (max-width: 720px) {
+  .dash-api-panel {
+    padding: 0.85rem;
+  }
+
+  .dash-api-controls {
+    align-items: stretch;
+  }
+
+  .dash-api-controls > * {
+    flex: 1 1 100%;
+  }
+
+  .dash-api-scan-form input[type="file"] {
+    max-width: 100%;
+  }
+}
+

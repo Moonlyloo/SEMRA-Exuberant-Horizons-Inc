@@ -1,4 +1,6 @@
 (function () {
+  const API_BASE_URL = "https://space-health-api-1007338674559.us-central1.run.app";
+  const OFFLINE_VITALS_QUEUE_KEY = "offline_vitals_queue";
   const h = React.createElement;
   const { useState, useEffect } = React;
 
@@ -9,6 +11,105 @@
   const DEFAULT_SLOT_COUNT = 0;
   const GENDER_OPTIONS = ["", "Female", "Male", "Non-binary", "Other"];
   const BLOOD_TYPE_OPTIONS = ["", "O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"];
+
+  function fetchApiJson(path, options) {
+    return fetch(API_BASE_URL + path, options || {}).then(function (response) {
+      return response.text().then(function (text) {
+        var payload;
+        try {
+          payload = text ? JSON.parse(text) : null;
+        } catch (_error) {
+          payload = null;
+        }
+        if (!response.ok) {
+          var detail =
+            payload && typeof payload === "object" && payload.detail
+              ? payload.detail
+              : response.statusText;
+          var error = new Error("API request failed (" + response.status + "): " + detail);
+          error.status = response.status;
+          throw error;
+        }
+        if (text && payload === null) {
+          throw new Error("API returned an invalid JSON response.");
+        }
+        return payload;
+      });
+    });
+  }
+
+  function readOfflineVitalsQueue() {
+    var raw = window.localStorage.getItem(OFFLINE_VITALS_QUEUE_KEY);
+    if (!raw) return [];
+    var queue = JSON.parse(raw);
+    if (!Array.isArray(queue)) {
+      throw new Error("Stored offline vitals queue is not an array.");
+    }
+    return queue;
+  }
+
+  function saveOfflineVitalsQueue(queue) {
+    window.localStorage.setItem(OFFLINE_VITALS_QUEUE_KEY, JSON.stringify(queue));
+  }
+
+  function getApiAstronautId() {
+    return "crew_1";
+  }
+
+  function getLocalTriage(payload, profile) {
+    var baseline =
+      profile && profile.medical_baseline
+        ? profile.medical_baseline
+        : SAMPLE_CLOUD_ASTRONAUT_ELENA.medical_baseline;
+    var baseHeartRate = Number(baseline.base_heart_rating_bpm) || 62;
+    var riskLevel = "GREEN";
+    if (payload.heart_rate > baseHeartRate * 1.6 || payload.sleep_hours < 4) {
+      riskLevel = "RED";
+    } else if (
+      payload.heart_rate > baseHeartRate * 1.3 ||
+      payload.sleep_hours < 6 ||
+      Boolean(payload.symptoms)
+    ) {
+      riskLevel = "YELLOW";
+    }
+    var conditions =
+      profile && Array.isArray(profile.medical_conditions)
+        ? profile.medical_conditions
+        : SAMPLE_CLOUD_ASTRONAUT_ELENA.medical_conditions;
+    var contraindications = conditions
+      .filter(function (condition) {
+        var name = String(condition.condition_name || "").toLowerCase();
+        return name.indexOf("penicillin") !== -1 || name.indexOf("ibuprofen") !== -1;
+      })
+      .map(function (condition) {
+        return condition.condition_name + " (" + (condition.condition_type || "contraindication") + ")";
+      });
+    return {
+      risk_level: riskLevel,
+      nasa_hazard:
+        riskLevel === "GREEN" ? "Routine Mission Monitoring" : "Microgravity Fluid Shift / Clinical Monitoring",
+      clinical_reasoning:
+        "Local threshold triage: heart rate " +
+        payload.heart_rate +
+        " bpm (baseline " +
+        baseHeartRate +
+        " bpm), sleep " +
+        payload.sleep_hours +
+        " hours." +
+        (payload.symptoms ? " Symptoms reported: " + payload.symptoms + "." : ""),
+      action_plan: [
+        "Record this reading and repeat measurements if symptoms change.",
+        contraindications.length
+          ? "Contraindications on file: " + contraindications.join("; ") + ". Do not use these medications."
+          : "Check the crew medical profile before any medication.",
+        "Contact the flight surgeon according to the mission medical protocol.",
+      ],
+    };
+  }
+
+  function getVitalsHistoryRecords(history) {
+    return history && Array.isArray(history.records) ? history.records : [];
+  }
 
   const SAMPLE_CLOUD_ASTRONAUT_ELENA = {
     id: "crew_1",
@@ -624,8 +725,8 @@
 
   function getDefaultState() {
     return {
-      slotCount: DEFAULT_SLOT_COUNT,
-      slots: createDefaultSlots(DEFAULT_SLOT_COUNT),
+      slotCount: 1,
+      slots: [normalizeAstronautProfile(SAMPLE_CLOUD_ASTRONAUT_ELENA, 0)],
     };
   }
 
@@ -3317,6 +3418,104 @@
     var diagnosticActive = _diagnosticActive[0];
     var setDiagnosticActive = _diagnosticActive[1];
 
+    var _browserOnline = useState(function () {
+      return typeof navigator === "undefined" || navigator.onLine;
+    });
+    var browserOnline = _browserOnline[0];
+    var setBrowserOnline = _browserOnline[1];
+    var _offlineMode = useState(false);
+    var offlineMode = _offlineMode[0];
+    var setOfflineMode = _offlineMode[1];
+    var _apiProfile = useState(null);
+    var apiProfile = _apiProfile[0];
+    var setApiProfile = _apiProfile[1];
+    var _apiHistory = useState([]);
+    var apiHistory = _apiHistory[0];
+    var setApiHistory = _apiHistory[1];
+    var _apiStatus = useState("");
+    var apiStatus = _apiStatus[0];
+    var setApiStatus = _apiStatus[1];
+    var _queueCount = useState(0);
+    var queueCount = _queueCount[0];
+    var setQueueCount = _queueCount[1];
+    var _isSyncing = useState(false);
+    var isSyncing = _isSyncing[0];
+    var setIsSyncing = _isSyncing[1];
+    var _triageResult = useState(null);
+    var triageResult = _triageResult[0];
+    var setTriageResult = _triageResult[1];
+    var _vitalsForm = useState({
+      heart_rate: "72",
+      blood_pressure: "120/80",
+      sleep_hours: "7.5",
+      exercise_min: "30",
+      symptoms: "",
+    });
+    var vitalsForm = _vitalsForm[0];
+    var setVitalsForm = _vitalsForm[1];
+    var _scanFile = useState(null);
+    var scanFile = _scanFile[0];
+    var setScanFile = _scanFile[1];
+    var _scanNotes = useState("");
+    var scanNotes = _scanNotes[0];
+    var setScanNotes = _scanNotes[1];
+    var _scanResult = useState(null);
+    var scanResult = _scanResult[0];
+    var setScanResult = _scanResult[1];
+    var _isAnalyzingScan = useState(false);
+    var isAnalyzingScan = _isAnalyzingScan[0];
+    var setIsAnalyzingScan = _isAnalyzingScan[1];
+
+    useEffect(function () {
+      var active = true;
+      function handleOnline() {
+        setBrowserOnline(true);
+      }
+      function handleOffline() {
+        setBrowserOnline(false);
+      }
+      window.addEventListener("online", handleOnline);
+      window.addEventListener("offline", handleOffline);
+      try {
+        setQueueCount(readOfflineVitalsQueue().length);
+      } catch (error) {
+        console.error("Could not read the offline vitals queue.", error);
+        setApiStatus("Could not read the saved offline queue: " + error.message);
+      }
+      fetchApiJson("/api/profile/" + getApiAstronautId())
+        .then(function (profile) {
+          if (active) setApiProfile(profile);
+        })
+        .catch(function (error) {
+          if (!active) return;
+          console.error("Could not load the crew profile from the API.", error);
+          setApiStatus("Profile unavailable; using the onboard cached baseline.");
+        });
+      fetchApiJson("/api/history/" + getApiAstronautId() + "?limit=50")
+        .then(function (history) {
+          if (active) setApiHistory(getVitalsHistoryRecords(history));
+        })
+        .catch(function (error) {
+          if (!active) return;
+          console.error("Could not load vitals history from the API.", error);
+          setApiStatus("History unavailable; offline triage remains available.");
+        });
+      return function () {
+        active = false;
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", handleOffline);
+      };
+    }, []);
+
+    useEffect(
+      function () {
+        if (browserOnline && !offlineMode) {
+          handleSyncQueue(true);
+        }
+      },
+      [browserOnline, offlineMode]
+    );
+
     useEffect(function () {
       var timer = window.setInterval(function () {
         setNow(new Date());
@@ -3356,6 +3555,26 @@
     var filteredHealthPlanRows = sample.healthPlanRows.filter(function (row) {
       return Boolean(visibleVitals[row.id]);
     });
+    var connectedToApi = browserOnline && !offlineMode;
+    var chronologicalHistory = apiHistory.slice().reverse();
+    var chartRates = chronologicalHistory
+      .map(function (record) {
+        var vitals = record && record.vitals ? record.vitals : record || {};
+        return Number(vitals.heart_rate);
+      })
+      .filter(function (value) {
+        return Number.isFinite(value);
+      });
+    var chartMinimum = chartRates.length ? Math.min.apply(Math, chartRates) : 0;
+    var chartMaximum = chartRates.length ? Math.max.apply(Math, chartRates) : 1;
+    var chartPolyline = chartRates
+      .map(function (value, index) {
+        var x = chartRates.length > 1 ? (index / (chartRates.length - 1)) * 280 : 140;
+        var spread = chartMaximum - chartMinimum || 1;
+        var y = 82 - ((value - chartMinimum) / spread) * 64;
+        return x.toFixed(1) + "," + y.toFixed(1);
+      })
+      .join(" ");
 
     function openVitalsSetup() {
       setDraftVisibleVitals(Object.assign({}, visibleVitals));
@@ -3463,6 +3682,185 @@
 
     function closeDiagnosticScreen() {
       setDiagnosticActive(false);
+    }
+
+    function refreshHistory() {
+      return fetchApiJson("/api/history/" + getApiAstronautId() + "?limit=50").then(function (
+        history
+      ) {
+        var records = getVitalsHistoryRecords(history);
+        setApiHistory(records);
+        return records;
+      });
+    }
+
+    function queueVitals(payload) {
+      try {
+        var queue = readOfflineVitalsQueue();
+        queue.push(payload);
+        saveOfflineVitalsQueue(queue);
+        setQueueCount(queue.length);
+        setApiStatus("Vitals saved onboard. " + queue.length + " record(s) pending sync.");
+      } catch (error) {
+        console.error("Could not save vitals to the offline queue.", error);
+        setApiStatus("Could not save vitals offline: " + error.message);
+      }
+    }
+
+    function handleSyncQueue() {
+      if (!browserOnline || offlineMode || isSyncing) return Promise.resolve();
+      var queuedRecords;
+      try {
+        queuedRecords = readOfflineVitalsQueue();
+      } catch (error) {
+        console.error("Could not read the offline vitals queue for sync.", error);
+        setApiStatus("Could not read the saved offline queue: " + error.message);
+        return Promise.resolve();
+      }
+      if (queuedRecords.length === 0) return Promise.resolve();
+      setIsSyncing(true);
+      setApiStatus("Syncing " + queuedRecords.length + " queued record(s) to mission control...");
+      return fetchApiJson("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ records: queuedRecords }),
+      })
+        .then(function (result) {
+          var latestQueue = readOfflineVitalsQueue();
+          var remaining = latestQueue.slice(queuedRecords.length);
+          saveOfflineVitalsQueue(remaining);
+          setQueueCount(remaining.length);
+          setApiStatus(
+            "Synced " +
+              (result && result.synced_count !== undefined ? result.synced_count : queuedRecords.length) +
+              " record(s)."
+          );
+          return refreshHistory().catch(function (error) {
+            console.error("Vitals synced, but history could not be refreshed.", error);
+            setApiStatus("Vitals synced; history refresh failed: " + error.message);
+          });
+        })
+        .catch(function (error) {
+          console.error("Offline vitals sync failed.", error);
+          setApiStatus("Sync failed; " + queuedRecords.length + " record(s) remain queued.");
+        })
+        .then(function () {
+          setIsSyncing(false);
+        });
+    }
+
+    function createVitalsPayload(form) {
+      var payload = {
+        astronaut_id: getApiAstronautId(),
+        mission_day: Number(missionDay),
+        environment: "Microgravity / Deep Space Transit",
+        heart_rate: Number(form.heart_rate),
+        blood_pressure: form.blood_pressure,
+        sleep_hours: Number(form.sleep_hours),
+        exercise_min: Number(form.exercise_min),
+        symptoms: form.symptoms,
+      };
+      if (
+        !Number.isInteger(payload.mission_day) ||
+        !Number.isInteger(payload.heart_rate) ||
+        !Number.isFinite(payload.sleep_hours) ||
+        !Number.isInteger(payload.exercise_min) ||
+        !payload.blood_pressure.trim()
+      ) {
+        throw new Error("Enter valid numeric vitals, mission day, and blood pressure.");
+      }
+      return payload;
+    }
+
+    function handleSubmitVitals(event) {
+      event.preventDefault();
+      var payload;
+      try {
+        payload = createVitalsPayload(vitalsForm);
+      } catch (error) {
+        setApiStatus(error.message);
+        return;
+      }
+      var localAssessment = getLocalTriage(payload, apiProfile || astronaut);
+      setTriageResult({ source: "onboard threshold triage", assessment: localAssessment });
+      if (!browserOnline || offlineMode) {
+        queueVitals(payload);
+        return;
+      }
+      setApiStatus("Submitting vitals for clinical assessment...");
+      fetchApiJson("/api/vitals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+        .then(function (assessment) {
+          setTriageResult({ source: "Cloud clinical assessment", assessment: assessment });
+          setApiStatus("Vitals submitted and saved to mission control.");
+          return refreshHistory().catch(function (error) {
+            console.error("Vitals submitted, but history could not be refreshed.", error);
+            setApiStatus("Vitals submitted; history refresh failed: " + error.message);
+          });
+        })
+        .catch(function (error) {
+          if (!error.status || error.status >= 500) {
+            queueVitals(payload);
+            setApiStatus("Network request failed. Local triage is active and vitals are queued.");
+          } else {
+            console.error("Vitals API rejected the submitted payload.", error);
+            setApiStatus("Vitals were not accepted: " + error.message);
+          }
+        });
+    }
+
+    function handleAnalyzeScan(event) {
+      event.preventDefault();
+      if (!scanFile) {
+        setApiStatus("Select an image before starting scan analysis.");
+        return;
+      }
+      if (!browserOnline || offlineMode) {
+        setApiStatus("Scan analysis requires a network connection. Vitals can still be queued offline.");
+        return;
+      }
+      var formData = new FormData();
+      formData.append("file", scanFile);
+      formData.append("astronaut_id", getApiAstronautId());
+      formData.append("notes", scanNotes);
+      setIsAnalyzingScan(true);
+      setApiStatus("Uploading scan for analysis...");
+      fetchApiJson("/api/analyze-scan", { method: "POST", body: formData })
+        .then(function (result) {
+          setScanResult(result);
+          setApiStatus("Scan analysis complete.");
+        })
+        .catch(function (error) {
+          console.error("Scan analysis request failed.", error);
+          setApiStatus("Scan analysis failed: " + error.message);
+        })
+        .then(function () {
+          setIsAnalyzingScan(false);
+        });
+    }
+
+    function populateTelemetryPreset(preset) {
+      if (preset === "anomaly") {
+        setVitalsForm({
+          heart_rate: "108",
+          blood_pressure: "138/88",
+          sleep_hours: "5.5",
+          exercise_min: "45",
+          symptoms: "Mild headache and visual blur",
+        });
+      } else {
+        setVitalsForm({
+          heart_rate: "72",
+          blood_pressure: "120/80",
+          sleep_hours: "7.5",
+          exercise_min: "30",
+          symptoms: "",
+        });
+      }
+      setApiStatus(preset === "anomaly" ? "Anomaly telemetry preset loaded." : "Normal baseline preset loaded.");
     }
 
     var tabs = [
@@ -3688,6 +4086,271 @@
           ? h(
               "main",
               { className: "dash-main" },
+              h(
+                "section",
+                { className: "dash-api-panel", "aria-labelledby": "api-panel-title" },
+                h(
+                  "div",
+                  { className: "dash-api-heading" },
+                  h(
+                    "div",
+                    null,
+                    h("h2", { id: "api-panel-title", className: "dash-box-heading" }, "Onboard Health Link"),
+                    h(
+                      "p",
+                      { className: "dash-api-subtitle" },
+                      "Crew profile: " +
+                        (apiProfile
+                          ? [apiProfile.first_name, apiProfile.last_name].filter(Boolean).join(" ")
+                          : displayName) +
+                        " · API ID: crew_1"
+                    )
+                  ),
+                  h(
+                    "span",
+                    {
+                      className: connectedToApi ? "dash-connection-badge dash-connection-badge--online" : "dash-connection-badge",
+                      role: "status",
+                    },
+                    connectedToApi ? "ONLINE" : "OFFLINE"
+                  )
+                ),
+                h(
+                  "div",
+                  { className: "dash-api-controls" },
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className: "dash-api-button",
+                      "aria-pressed": offlineMode,
+                      onClick: function () {
+                        setOfflineMode(function (current) {
+                          return !current;
+                        });
+                      },
+                    },
+                    offlineMode ? "Switch to Online" : "Switch to Offline"
+                  ),
+                  h(
+                    "span",
+                    { className: "dash-api-latency" },
+                    "DSN store-and-forward · 20–45 min"
+                  ),
+                  h(
+                    "span",
+                    { className: "dash-queue-badge", "aria-live": "polite" },
+                    "Pending queue: " + queueCount
+                  ),
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className: "dash-api-button dash-api-button--primary",
+                      disabled: !connectedToApi || queueCount === 0 || isSyncing,
+                      onClick: handleSyncQueue,
+                    },
+                    isSyncing ? "Syncing..." : "Sync Now"
+                  )
+                ),
+                apiStatus ? h("p", { className: "dash-api-status", role: "status" }, apiStatus) : null,
+                h(
+                  "div",
+                  { className: "dash-api-simulator" },
+                  h("strong", null, "Simulate Sensor Telemetry"),
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className: "dash-api-button",
+                      onClick: function () {
+                        populateTelemetryPreset("normal");
+                      },
+                    },
+                    "Normal Baseline"
+                  ),
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className: "dash-api-button",
+                      onClick: function () {
+                        populateTelemetryPreset("anomaly");
+                      },
+                    },
+                    "SANS / Microgravity Fluid-Shift & Radiation Anomaly"
+                  )
+                ),
+                h(
+                  "form",
+                  { className: "dash-api-vitals-form", onSubmit: handleSubmitVitals },
+                  [
+                    { key: "heart_rate", label: "Heart rate (bpm)", type: "number", step: "1" },
+                    { key: "blood_pressure", label: "Blood pressure", type: "text" },
+                    { key: "sleep_hours", label: "Sleep (hours)", type: "number", step: "0.1" },
+                    { key: "exercise_min", label: "Exercise (min)", type: "number", step: "1" },
+                  ].map(function (field) {
+                    return h(
+                      "label",
+                      { key: field.key, className: "dash-api-field" },
+                      h("span", null, field.label),
+                      h("input", {
+                        type: field.type,
+                        step: field.step,
+                        value: vitalsForm[field.key],
+                        required: true,
+                        onChange: function (event) {
+                          var next = Object.assign({}, vitalsForm);
+                          next[field.key] = event.target.value;
+                          setVitalsForm(next);
+                        },
+                      })
+                    );
+                  }),
+                  h(
+                    "label",
+                    { className: "dash-api-field dash-api-field--symptoms" },
+                    h("span", null, "Symptoms"),
+                    h("input", {
+                      type: "text",
+                      value: vitalsForm.symptoms,
+                      onChange: function (event) {
+                        var next = Object.assign({}, vitalsForm);
+                        next.symptoms = event.target.value;
+                        setVitalsForm(next);
+                      },
+                    })
+                  ),
+                  h(
+                    "button",
+                    { type: "submit", className: "dash-api-button dash-api-button--primary" },
+                    "Submit Vitals"
+                  )
+                ),
+                triageResult
+                  ? h(
+                      "section",
+                      { className: "dash-api-result", "aria-live": "polite" },
+                      h(
+                        "h3",
+                        null,
+                        "Triage: " +
+                          (triageResult.assessment.risk_level || "UNKNOWN") +
+                          " · " +
+                          triageResult.source
+                      ),
+                      h("p", null, triageResult.assessment.clinical_reasoning || ""),
+                      h("p", null, "NASA hazard: " + (triageResult.assessment.nasa_hazard || "Not specified")),
+                      h(
+                        "ul",
+                        null,
+                        (triageResult.assessment.action_plan || []).map(function (step, index) {
+                          return h("li", { key: index }, step);
+                        })
+                      )
+                    )
+                  : null,
+                h(
+                  "form",
+                  { className: "dash-api-scan-form", onSubmit: handleAnalyzeScan },
+                  h("h3", null, "Medical Scan Analysis"),
+                  h("input", {
+                    type: "file",
+                    accept: "image/*",
+                    required: true,
+                    onChange: function (event) {
+                      setScanFile(event.target.files && event.target.files[0] ? event.target.files[0] : null);
+                    },
+                  }),
+                  h("input", {
+                    type: "text",
+                    value: scanNotes,
+                    placeholder: "Clinical notes (optional)",
+                    onChange: function (event) {
+                      setScanNotes(event.target.value);
+                    },
+                  }),
+                  h(
+                    "button",
+                    {
+                      type: "submit",
+                      className: "dash-api-button",
+                      disabled: !connectedToApi || isAnalyzingScan,
+                    },
+                    isAnalyzingScan ? "Analyzing..." : "Analyze Scan"
+                  )
+                ),
+                scanResult
+                  ? h(
+                      "div",
+                      { className: "dash-api-result", "aria-live": "polite" },
+                      h("h3", null, "Scan: " + scanResult.risk_level),
+                      h("p", null, scanResult.ai_findings),
+                      h("p", null, scanResult.recommended_action),
+                      h("p", null, scanResult.gcs_uri)
+                    )
+                  : null,
+                h(
+                  "section",
+                  { className: "dash-api-history", "aria-labelledby": "api-history-title" },
+                  h("h3", { id: "api-history-title" }, "Recent Vitals · Newest First"),
+                  chartRates.length
+                    ? h(
+                        "div",
+                        { className: "dash-api-chart", "aria-label": "Heart rate history chart, chronological order" },
+                        h("span", null, "Heart rate (bpm) · oldest → newest"),
+                        h(
+                          "svg",
+                          { viewBox: "0 0 280 100", role: "img", "aria-label": "Chronological heart rate trend" },
+                          h("polyline", {
+                            points: chartPolyline,
+                            fill: "none",
+                            stroke: "#38bdf8",
+                            strokeWidth: "3",
+                          })
+                        )
+                      )
+                    : h("p", null, "No chartable vitals history available."),
+                  apiHistory.length
+                    ? h(
+                        "div",
+                        { className: "dash-api-history-table-wrap" },
+                        h(
+                          "table",
+                          { className: "dash-api-history-table" },
+                          h(
+                            "thead",
+                            null,
+                            h(
+                              "tr",
+                              null,
+                              h("th", null, "Time"),
+                              h("th", null, "Mission day"),
+                              h("th", null, "Heart rate"),
+                              h("th", null, "Risk")
+                            )
+                          ),
+                          h(
+                            "tbody",
+                            null,
+                            apiHistory.map(function (record, index) {
+                              var vitals = record && record.vitals ? record.vitals : record || {};
+                              var assessment = record && record.ai_assessment ? record.ai_assessment : {};
+                              return h(
+                                "tr",
+                                { key: record.id || index },
+                                h("td", null, record.timestamp || "—"),
+                                h("td", null, record.mission_day || vitals.mission_day || "—"),
+                                h("td", null, vitals.heart_rate === undefined ? "—" : vitals.heart_rate + " bpm"),
+                                h("td", null, assessment.risk_level || "—")
+                              );
+                            })
+                          )
+                        )
+                      )
+                    : h("p", null, "No vitals records returned by the API.")
+                )
+              ),
               h(
                 "section",
                 { className: "dash-col-left" },
@@ -4488,33 +5151,32 @@
 
     useEffect(function () {
       var active = true;
-      var cfg = loadCloudConfig();
-      if (cfg.autoConnect === false) {
-        return function () {
-          active = false;
-        };
-      }
-      AHSCloudService.autoConnect(cfg, crewState.slots)
-        .then(function (result) {
-          if (!active || !result || !Array.isArray(result.profiles) || result.profiles.length === 0) {
-            return;
-          }
+      fetchApiJson("/api/profile/crew_1")
+        .then(function (profile) {
+          if (!active || !profile) return;
+          var normalized = normalizeAstronautProfile(profile, 0);
           setCrewState(function (prev) {
-            var hasLocalSlots = prev.slots.some(Boolean);
-            if (result.source !== "firestore" && hasLocalSlots) {
-              return prev;
-            }
-            var clamped = Math.min(MAX_SLOTS, Math.max(result.profiles.length, prev.slotCount));
-            var nextSlots = Array.from({ length: clamped }, function (_, idx) {
-              return result.profiles[idx] || prev.slots[idx] || null;
+            var demoIndex = prev.slots.findIndex(function (slot) {
+              return slot && slot.astronaut_id === "crew_1";
             });
-            return {
-              slotCount: clamped,
-              slots: nextSlots,
-            };
+            if (demoIndex !== -1) {
+              var updatedSlots = prev.slots.slice();
+              updatedSlots[demoIndex] = normalized;
+              return { slotCount: prev.slotCount, slots: updatedSlots };
+            }
+            if (prev.slots.some(Boolean)) return prev;
+            return { slotCount: 1, slots: [normalized] };
           });
         })
-        .catch(function () {});
+        .catch(function (error) {
+          if (!active) return;
+          console.error("Could not load the demo crew profile from the API.", error);
+          setCrewState(function (prev) {
+            return prev.slots.some(Boolean)
+              ? prev
+              : { slotCount: 1, slots: [normalizeAstronautProfile(SAMPLE_CLOUD_ASTRONAUT_ELENA, 0)] };
+          });
+        });
       return function () {
         active = false;
       };
