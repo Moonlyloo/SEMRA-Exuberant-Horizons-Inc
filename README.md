@@ -235,6 +235,9 @@ required permissions. Do not commit credential files.
 - **Ibrahim Alizada — Principal AI, Systems & Security Architect:** End-to-end
   GCP infrastructure, FastAPI backend, multimodal Vertex AI integration,
   zero-key IAM security, and clinical safety guardrails.
+- **Evgeniia Rozhkova — Team Lead & System Designer:** Leads team coordination
+  and shapes the end-to-end system design, turning mission needs into a
+  cohesive astronaut-health platform.
 - **Domain Research & Data Lead — Lead Data Engineer & Space Medicine
   Researcher:** NASA HRP hazard research, astronaut clinical baselines,
   allergy profiles, and biomedical dataset structuring.
