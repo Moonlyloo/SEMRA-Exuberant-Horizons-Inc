@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#060a12" />
+    <meta name="application-name" content="Astronaut Health System" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Astronaut Health System</title>
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script>
+      if (!window.React || !window.ReactDOM) {
+        document.getElementById("root").innerHTML =
+          '<div style="padding:2rem;text-align:center;font-family:sans-serif;color:#e2e8f0;">' +
+          '<h2>Unable to load React</h2>' +
+          '<p>An internet connection is required to load React 18 from CDN.</p>' +
+          "</div>";
+      }
+      if ("serviceWorker" in navigator && (location.protocol === "http:" || location.protocol === "https:")) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("./sw.js").catch(function () {});
+        });
+      }
+    </script>
+    <script src="./app.js"></script>
+  </body>
+</html>
