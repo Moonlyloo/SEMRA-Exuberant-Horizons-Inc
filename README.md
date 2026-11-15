@@ -24,9 +24,11 @@ connected rather than hosting a separate onboard server.
 
 The installable web-app shell is described by `manifest.json`; `sw.js` caches
 only same-origin frontend assets and does not intercept or cache Cloud Run API
-responses. In local browser verification, the service-worker registration
-remained inactive and created no cache, so app-shell offline behavior is not
-confirmed.
+responses. The local CSS, JavaScript, and worker URLs carry a matching release
+version so browsers can refresh stale assets after deployment; increment the
+version when updating those files. In local browser verification, the
+service-worker registration remained inactive and created no cache, so
+app-shell offline behavior is not confirmed.
 
 The dashboard also includes a 36-item **Measurements** catalogue and a
 **Warning Log** with search, filters, and per-event analysis. Catalogue
