@@ -14,9 +14,12 @@ capture, and onboard triage during delayed Earth communications.
 The browser app (`index.html`, `app.js`, and `styles.css` in the repository
 root) represents the astronaut client on the cabin LAN. It provides cached
 crew information, local threshold-based triage, a LocalStorage queue named
-`offline_vitals_queue`, and online/offline controls. The onboard LAN is modeled
-as a 0 ms boundary; the current web demo calls the Cloud Run API directly when
-connected rather than hosting a separate onboard server.
+`offline_vitals_queue`. The dashboard has been restored to its pre-health-link
+layout and no longer exposes the health-link panel, online/offline controls,
+vitals submission, scan analysis, or API history. The client-side API and
+offline-sync logic remains in `app.js`. The onboard LAN is modeled as a 0 ms
+boundary; the current web demo calls the Cloud Run API directly when connected
+rather than hosting a separate onboard server.
 
 The installable web-app shell is described by `manifest.json`; `sw.js` caches
 only same-origin frontend assets and does not intercept or cache Cloud Run API
@@ -33,11 +36,10 @@ Cloud Run API described below.
 
 ### DSN latency boundary
 
-The dashboard displays a simulated **20–45 minute** Deep Space Network
-store-and-forward interval. When the browser is offline or the API request
-cannot be reached, vitals are queued locally and can be triaged onboard. On
-reconnection, the client posts queued records to `/api/sync` and refreshes the
-history. Clinical updates and baselines should flow from Ground Mission
+The system models a **20–45 minute** Deep Space Network store-and-forward
+interval. Client code can queue vitals locally when offline and post them to
+`/api/sync` on reconnection, but the dashboard no longer exposes those
+controls. Clinical updates and baselines should flow from Ground Mission
 Control to an onboard server over the DSN; the onboard server should then
 serve them to the client over the cabin LAN. That ground-to-onboard feedback
 path is an architectural boundary, not a separate service implemented in
