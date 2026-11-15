@@ -2,7 +2,7 @@
   const API_BASE_URL = "https://space-health-api-1007338674559.us-central1.run.app";
   const OFFLINE_VITALS_QUEUE_KEY = "offline_vitals_queue";
   const h = React.createElement;
-  const { useState, useEffect } = React;
+  const { useState, useEffect, useRef } = React;
 
   const STORAGE_KEY = "ahs_crew_state_v2";
   const GCLOUD_CONFIG_STORAGE_KEY = "ahs_gcloud_config_v1";
@@ -3330,6 +3330,1882 @@
     }, 1000);
   }
 
+  var MEASUREMENT_SPECS = [
+    {
+      id: "electrocardiogram",
+      name: "Electrocardiogram",
+      dataType: "Time-series Array / Float[]",
+      unit: "mV",
+      representation: "Line graph (updates every 0.1s)",
+      threshold: "Δ Amplitude > 0.5 mV or Δ R-R interval > 300 ms",
+      category: "vitals",
+      chartType: "line",
+    },
+    {
+      id: "heart_rate",
+      name: "Heart rate",
+      dataType: "Integer",
+      unit: "bpm",
+      representation: "Line graph (updates every 1s)",
+      threshold: "Δ HR > 30 bpm within 30s",
+      category: "vitals",
+      chartType: "line",
+    },
+    {
+      id: "oxygen_level_in_blood",
+      name: "Oxygen level in blood",
+      dataType: "Float",
+      unit: "% (SpO2)",
+      representation: "Line graph (updates every 0.1s)",
+      threshold: "Δ SpO2 < -5% within 10s",
+      category: "vitals",
+      chartType: "line",
+    },
+    {
+      id: "pressure",
+      name: "Pressure",
+      dataType: "String / Integer (Systolic / Diastolic)",
+      unit: "mmHg",
+      representation: "Line graph (updates every 1s)",
+      threshold: "Systolic > 138/155 mmHg or Diastolic > 88/96 mmHg (or Δ > 18/25 mmHg in 5s)",
+      category: "vitals",
+      chartType: "line",
+    },
+    {
+      id: "respiration_rate",
+      name: "Respiration rate",
+      dataType: "Integer",
+      unit: "breaths/min",
+      representation: "Line graph (updates every 10s)",
+      threshold: "Δ RR > 8 breaths/min within 30s",
+      category: "vitals",
+      chartType: "line",
+    },
+    {
+      id: "oxygen_left",
+      name: "Oxygen left",
+      dataType: "Float",
+      unit: "% or L / kPa",
+      representation: "Number (updates every 1s)",
+      threshold: "Reserve < 40% (Warning) or < 25% (SOS) | Δ Consumption rate > +50%",
+      category: "suit_cabin",
+      chartType: "number",
+    },
+    {
+      id: "co2_level",
+      name: "CO_2 level",
+      dataType: "Float",
+      unit: "ppm or mmHg",
+      representation: "Line graph (updates every 0.5s)",
+      threshold: "CO2 > 3.50 mmHg (Warning) or > 4.25 mmHg (SOS)",
+      category: "suit_cabin",
+      chartType: "line",
+    },
+    {
+      id: "pressure_inside_veins",
+      name: "Pressure inside veins",
+      dataType: "Float",
+      unit: "mmHg",
+      representation: "Number (updates every 1s)",
+      threshold: "Δ CVP > 4 mmHg within 10s (Warning > 7.8 mmHg, SOS > 9.5 mmHg)",
+      category: "vitals",
+      chartType: "number",
+    },
+    {
+      id: "radiation_exposure",
+      name: "Radiation exposure",
+      dataType: "Float",
+      unit: "R (röntgen)",
+      representation: "Column graph (updates every 5s)",
+      threshold: "Δ Radiation > 0.006 R within 5s or > 0.055 R/sol (Warning) | > 0.085 R/sol or Δ > 0.015 R within 5s (SOS)",
+      category: "suit_cabin",
+      chartType: "column",
+    },
+    {
+      id: "battery_level",
+      name: "Battery level",
+      dataType: "Float",
+      unit: "%",
+      representation: "Number (updates every 1s)",
+      threshold: "Charge < 35% (Warning) or < 20% (SOS) | Δ Discharge rate > +50%",
+      category: "suit_cabin",
+      chartType: "number",
+    },
+    {
+      id: "temp_inside_costume",
+      name: "Temperature inside costume",
+      dataType: "Float",
+      unit: "°C",
+      representation: "Line graph (updates every 1s)",
+      threshold: "Δ Suit Temp > 2.5 °C within 30s (> 23.3 °C Warning, > 24.5 °C SOS)",
+      category: "suit_cabin",
+      chartType: "line",
+    },
+    {
+      id: "skin_surface",
+      name: "Skin surface",
+      dataType: "Float",
+      unit: "°C",
+      representation: "Line graph (updates every 5s)",
+      threshold: "Δ Skin Temp > 1.5 °C within 1m (> 37.2 °C Warning, > 37.9 °C SOS)",
+      category: "vitals",
+      chartType: "line",
+    },
+    {
+      id: "metabolic_rate",
+      name: "Metabolic rate",
+      dataType: "Float",
+      unit: "kcal/h or W",
+      representation: "Number (updates every 5s)",
+      threshold: "Δ Metabolic rate > 100 kcal/h within 1m (> 198 kcal/h Warning, > 250 kcal/h SOS)",
+      category: "vitals",
+      chartType: "number",
+    },
+    {
+      id: "temp_outside_costume",
+      name: "Temperature outside costume",
+      dataType: "Float",
+      unit: "°C",
+      representation: "Line graph (updates every 1s)",
+      threshold: "Δ External Temp > 10 °C within 5s",
+      category: "suit_cabin",
+      chartType: "line",
+    },
+    {
+      id: "outside_temperature",
+      name: "Outside temperature",
+      dataType: "Float",
+      unit: "°C",
+      representation: "Line graph (updates every 5s)",
+      threshold: "Δ Cabin Temp > 3 °C within 1m",
+      category: "suit_cabin",
+      chartType: "line",
+    },
+    {
+      id: "humidity",
+      name: "Humidity",
+      dataType: "Float",
+      unit: "%",
+      representation: "Line graph (updates every 5s)",
+      threshold: "Δ Humidity > 15% within 1m",
+      category: "suit_cabin",
+      chartType: "line",
+    },
+    {
+      id: "sleep_amount",
+      name: "Sleep amount",
+      dataType: "Float",
+      unit: "hours/sol",
+      representation: "Column graph (updates per sol)",
+      threshold: "Δ Sleep per sol < -2 hours/sol vs baseline",
+      category: "daily",
+      chartType: "column",
+    },
+    {
+      id: "exercise_activity",
+      name: "Exercise activity",
+      dataType: "Integer / Float",
+      unit: "min/sol or kcal/sol",
+      representation: "Column graph (updates per sol)",
+      threshold: "Δ Activity per sol < -30% vs target",
+      category: "daily",
+      chartType: "column",
+    },
+    {
+      id: "blood_type",
+      name: "Blood type",
+      dataType: "Enum / String",
+      unit: "N/A",
+      representation: "Const",
+      threshold: "N/A",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "allergies",
+      name: "Allergies",
+      dataType: "Array<String>",
+      unit: "N/A",
+      representation: "Const",
+      threshold: "N/A",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "drugs_intolerance",
+      name: "Drugs intolerance",
+      dataType: "Array<String>",
+      unit: "N/A",
+      representation: "Const",
+      threshold: "N/A",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "incurable_diseases",
+      name: "Incurable disieses",
+      dataType: "Array<String>",
+      unit: "N/A",
+      representation: "Const",
+      threshold: "N/A",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "base_heart_rating",
+      name: "Base heart rating",
+      dataType: "Integer",
+      unit: "bpm",
+      representation: "Const",
+      threshold: "N/A (Baseline Reference)",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "base_blood_pressure",
+      name: "Base blood pressure",
+      dataType: "String / Object",
+      unit: "mmHg",
+      representation: "Const",
+      threshold: "N/A (Baseline Reference)",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "base_ecg_results",
+      name: "Base ECG results",
+      dataType: "Time-series Array / String",
+      unit: "mV",
+      representation: "Const",
+      threshold: "N/A (Baseline Reference)",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "max_oxygen_capacity_in_blood",
+      name: "Max oxygen capacity in blood",
+      dataType: "Float",
+      unit: "mL/kg/min",
+      representation: "Const",
+      threshold: "N/A (Baseline Reference)",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "immune_profile",
+      name: "Immune profile",
+      dataType: "String / Object",
+      unit: "N/A",
+      representation: "Const",
+      threshold: "N/A",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "bone_material_normal_density",
+      name: "Bone material normal density",
+      dataType: "Float",
+      unit: "g/cm²",
+      representation: "Const",
+      threshold: "N/A",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "baseline_body_composition",
+      name: "Baseline body composition",
+      dataType: "Object / Float",
+      unit: "%",
+      representation: "Const",
+      threshold: "N/A",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "dental_records",
+      name: "Dental records",
+      dataType: "String / Object",
+      unit: "N/A",
+      representation: "Const",
+      threshold: "N/A",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "crew_role",
+      name: "Crew role",
+      dataType: "String",
+      unit: "N/A",
+      representation: "Const",
+      threshold: "N/A",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "full_name",
+      name: "Full name",
+      dataType: "String",
+      unit: "N/A",
+      representation: "Const",
+      threshold: "N/A",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "date_of_birth",
+      name: "Date of birth",
+      dataType: "Date (ISO 8601)",
+      unit: "N/A",
+      representation: "Const",
+      threshold: "N/A",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "sex",
+      name: "Sex",
+      dataType: "Enum / String",
+      unit: "N/A",
+      representation: "Const",
+      threshold: "N/A",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "standing_height",
+      name: "Standing height",
+      dataType: "Float",
+      unit: "cm",
+      representation: "Const",
+      threshold: "N/A",
+      category: "baseline",
+      chartType: "const",
+    },
+    {
+      id: "sitting_height",
+      name: "Sitting height",
+      dataType: "Float",
+      unit: "cm",
+      representation: "Const",
+      threshold: "N/A",
+      category: "baseline",
+      chartType: "const",
+    },
+  ];
+
+  function buildDefaultMeasurementsForAstronaut(astronaut, slotIndex) {
+    var offset = (slotIndex || 0) % 5;
+    var baseline = (astronaut && astronaut.medical_baseline) || {};
+    var bodyComp = baseline.baseline_body_composition || {};
+    var immuneProf = baseline.immune_profile || {};
+    var dentalRec = baseline.dental_records || {};
+    var fullNameVal = getAstronautFullName(astronaut) || "Elena Rostova";
+    var dobVal = (astronaut && astronaut.date_of_birth) || "1992-05-14";
+    var sexVal = (astronaut && (astronaut.sex || astronaut.gender)) || "Female";
+    var roleVal = (astronaut && astronaut.crew_role) || "Flight Engineer";
+    var standingH = resolvePositiveNumber(astronaut && astronaut.standing_height_cm, 172.5);
+    var sittingH = resolvePositiveNumber(astronaut && astronaut.sitting_height_cm, 91.0);
+    var muscleKg = resolvePositiveNumber(bodyComp.muscle_mass_kg, 48.2);
+    var fatPct = resolvePositiveNumber(bodyComp.body_fat_pct, 21.5);
+    var bloodTypeVal = baseline.blood_type || (astronaut && astronaut.bloodType) || "O+";
+    var bmdVal = resolvePositiveNumber(baseline.bone_material_normal_density_g_cm2, 1.185);
+    var baseHrVal = resolvePositiveNumber(baseline.base_heart_rating_bpm, 62);
+    var baseBpStr = baseline.base_blood_pressure || "115/75";
+    var bpParts = String(baseBpStr).split("/");
+    var sysVal = parseInt(bpParts[0], 10) || 115;
+    var diaVal = parseInt(bpParts[1], 10) || 75;
+    var baseEcgVal = baseline.base_ecg_results || "Normal sinus rhythm";
+    var vo2Val = resolvePositiveNumber(baseline.max_oxygen_capacity_ml_kg_min, 49.5);
+    var wbcVal = resolvePositiveNumber(immuneProf.baseline_wbc, 6.1);
+    var dentalStr = (dentalRec.status || "Cleared") + " (Last check: " + (dentalRec.last_check || "2026-09-01") + ")";
+
+    var conditionsList =
+      astronaut && Array.isArray(astronaut.medical_conditions) ? astronaut.medical_conditions : [];
+    var allergyItems = conditionsList
+      .filter(function (c) {
+        return c && /allerg/i.test(String(c.condition_type || ""));
+      })
+      .map(function (c) {
+        return c.condition_name + (c.notes ? " (" + c.notes + ")" : "");
+      });
+    var drugItems = conditionsList
+      .filter(function (c) {
+        return c && /intoleran|drug/i.test(String(c.condition_type || ""));
+      })
+      .map(function (c) {
+        return c.condition_name + (c.notes ? " (" + c.notes + ")" : "");
+      });
+    var incurableItems = conditionsList
+      .filter(function (c) {
+        return c && /incurable|chronic|disease|disiese/i.test(String(c.condition_type || ""));
+      })
+      .map(function (c) {
+        return c.condition_name + (c.notes ? " (" + c.notes + ")" : "");
+      });
+
+    var baseRadR = Number((0.038 + offset * 0.002).toFixed(3));
+    var defaultsMap = {
+      electrocardiogram: {
+        value: "1.18",
+        series: [
+          0.16, -0.15, 1.18, -0.29, 0.25,
+          0.16, -0.14, 1.17, -0.28, 0.24,
+          0.15, -0.15, 1.19, -0.30, 0.25,
+          0.16, -0.15, 1.18, -0.28, 0.24,
+          0.16, -0.15, 1.18, -0.29, 0.25,
+        ],
+        seriesLabels: [
+          "-2.4s", "-2.3s", "-2.2s", "-2.1s", "-2.0s",
+          "-1.9s", "-1.8s", "-1.7s", "-1.6s", "-1.5s",
+          "-1.4s", "-1.3s", "-1.2s", "-1.1s", "-1.0s",
+          "-0.9s", "-0.8s", "-0.7s", "-0.6s", "-0.5s",
+          "-0.4s", "-0.3s", "-0.2s", "-0.1s", "Now",
+        ],
+      },
+      heart_rate: {
+        value: "78",
+        series: [77, 78, 79, 78, 77, 79, 80, 79, 78, 77, 78, 80, 79, 78, 79, 78, 77, 79, 78, 78],
+        seriesLabels: [
+          "-19s", "-18s", "-17s", "-16s", "-15s", "-14s", "-13s", "-12s", "-11s", "-10s",
+          "-9s", "-8s", "-7s", "-6s", "-5s", "-4s", "-3s", "-2s", "-1s", "Now",
+        ],
+      },
+      respiration_rate: {
+        value: "14",
+        series: [14, 14, 15, 14, 13, 14, 15, 14, 14, 15, 14, 14],
+        seriesLabels: ["-110s", "-100s", "-90s", "-80s", "-70s", "-60s", "-50s", "-40s", "-30s", "-20s", "-10s", "Now"],
+      },
+      metabolic_rate: { value: "92.5 kcal/h (108 W)" },
+      oxygen_level_in_blood: {
+        value: "98.6",
+        series: [98.5, 98.6, 98.6, 98.5, 98.7, 98.6, 98.5, 98.6, 98.7, 98.6, 98.5, 98.6, 98.6, 98.7, 98.6, 98.5, 98.6, 98.6, 98.5, 98.6],
+        seriesLabels: [
+          "-1.9s", "-1.8s", "-1.7s", "-1.6s", "-1.5s", "-1.4s", "-1.3s", "-1.2s", "-1.1s", "-1.0s",
+          "-0.9s", "-0.8s", "-0.7s", "-0.6s", "-0.5s", "-0.4s", "-0.3s", "-0.2s", "-0.1s", "Now",
+        ],
+      },
+      pressure_inside_veins: { value: "5.2" },
+      pressure: {
+        value: sysVal + "/" + diaVal,
+        series: [
+          sysVal - 1, sysVal, sysVal + 1, sysVal, sysVal - 1, sysVal, sysVal + 1, sysVal, sysVal - 1, sysVal,
+          sysVal + 1, sysVal, sysVal - 1, sysVal, sysVal, sysVal + 1, sysVal, sysVal - 1, sysVal, sysVal,
+        ],
+        seriesSecondary: [
+          diaVal, diaVal, diaVal + 1, diaVal, diaVal - 1, diaVal, diaVal, diaVal + 1, diaVal, diaVal,
+          diaVal, diaVal - 1, diaVal, diaVal, diaVal + 1, diaVal, diaVal, diaVal - 1, diaVal, diaVal,
+        ],
+        seriesLabels: [
+          "-19s", "-18s", "-17s", "-16s", "-15s", "-14s", "-13s", "-12s", "-11s", "-10s",
+          "-9s", "-8s", "-7s", "-6s", "-5s", "-4s", "-3s", "-2s", "-1s", "Now",
+        ],
+      },
+      co2_level: {
+        value: "2.60 mmHg (3421 ppm)",
+        series: [2.56, 2.58, 2.57, 2.59, 2.60, 2.58, 2.59, 2.61, 2.60, 2.58, 2.59, 2.60, 2.61, 2.59, 2.60, 2.60],
+        seriesLabels: [
+          "-7.5s", "-7.0s", "-6.5s", "-6.0s", "-5.5s", "-5.0s", "-4.5s", "-4.0s",
+          "-3.5s", "-3.0s", "-2.5s", "-2.0s", "-1.5s", "-1.0s", "-0.5s", "Now",
+        ],
+      },
+      oxygen_left: { value: "88.00% (528 L / 101.3 kPa)" },
+      temp_inside_costume: {
+        value: "21.6",
+        series: [21.5, 21.6, 21.6, 21.5, 21.6, 21.7, 21.6, 21.6, 21.5, 21.6, 21.7, 21.6, 21.6, 21.5, 21.6, 21.6],
+        seriesLabels: [
+          "-15s", "-14s", "-13s", "-12s", "-11s", "-10s", "-9s", "-8s",
+          "-7s", "-6s", "-5s", "-4s", "-3s", "-2s", "-1s", "Now",
+        ],
+      },
+      temp_outside_costume: {
+        value: "21.4",
+        series: [21.3, 21.4, 21.4, 21.3, 21.4, 21.5, 21.4, 21.4, 21.3, 21.4, 21.5, 21.4, 21.4, 21.3, 21.4, 21.4],
+        seriesLabels: [
+          "-15s", "-14s", "-13s", "-12s", "-11s", "-10s", "-9s", "-8s",
+          "-7s", "-6s", "-5s", "-4s", "-3s", "-2s", "-1s", "Now",
+        ],
+      },
+      battery_level: { value: "92.40" },
+      radiation_exposure: {
+        value: baseRadR.toFixed(3),
+        series: [0.036, 0.037, 0.038, 0.039, 0.038, 0.040, baseRadR],
+        seriesLabels: ["-30s", "-25s", "-20s", "-15s", "-10s", "-5s", "Now"],
+      },
+      skin_surface: {
+        value: "36.4",
+        series: [36.3, 36.4, 36.4, 36.3, 36.4, 36.5, 36.4, 36.4, 36.3, 36.4, 36.4, 36.4],
+        seriesLabels: ["-55s", "-50s", "-45s", "-40s", "-35s", "-30s", "-25s", "-20s", "-15s", "-10s", "-5s", "Now"],
+      },
+      outside_temperature: {
+        value: "21.4",
+        series: [21.3, 21.4, 21.4, 21.3, 21.4, 21.5, 21.4, 21.4, 21.3, 21.4, 21.4, 21.4],
+        seriesLabels: ["-55s", "-50s", "-45s", "-40s", "-35s", "-30s", "-25s", "-20s", "-15s", "-10s", "-5s", "Now"],
+      },
+      humidity: {
+        value: "44.0",
+        series: [43.8, 44.0, 44.1, 43.9, 44.0, 44.2, 44.1, 44.0, 43.9, 44.1, 44.0, 44.0],
+        seriesLabels: ["-55s", "-50s", "-45s", "-40s", "-35s", "-30s", "-25s", "-20s", "-15s", "-10s", "-5s", "Now"],
+      },
+      sleep_amount: {
+        value: "7.5",
+        series: [7.8, 7.2, 8.0, 6.9, 7.4, 7.6, 7.5],
+        seriesLabels: ["Sol -6", "Sol -5", "Sol -4", "Sol -3", "Sol -2", "Sol -1", "This Sol"],
+      },
+      exercise_activity: {
+        value: "90 min/sol (639 kcal/sol)",
+        series: [85, 90, 95, 80, 90, 100, 90],
+        seriesLabels: ["Sol -6", "Sol -5", "Sol -4", "Sol -3", "Sol -2", "Sol -1", "This Sol"],
+      },
+      full_name: { value: fullNameVal },
+      date_of_birth: { value: dobVal },
+      sex: { value: sexVal },
+      crew_role: { value: roleVal },
+      standing_height: { value: String(standingH) },
+      sitting_height: { value: String(sittingH) },
+      baseline_body_composition: { value: "Fat: " + fatPct + "% (Muscle: " + muscleKg + " kg)" },
+      blood_type: { value: bloodTypeVal },
+      allergies: { value: allergyItems.length > 0 ? allergyItems.join(", ") : "Penicillin (Severe skin rash)" },
+      drugs_intolerance: { value: drugItems.length > 0 ? drugItems.join(", ") : "Ibuprofen (Gastric irritation in microgravity)" },
+      immune_profile: { value: "Baseline WBC: " + wbcVal + " ×10³/µL" },
+      dental_records: { value: dentalStr },
+      incurable_diseases: { value: incurableItems.length > 0 ? incurableItems.join(", ") : "None recorded" },
+      bone_material_normal_density: { value: String(bmdVal) },
+      base_heart_rating: { value: String(baseHrVal) },
+      base_ecg_results: { value: baseEcgVal + " (0.16, -0.15, 1.18, -0.29, 0.25 mV)" },
+      base_blood_pressure: { value: baseBpStr },
+      max_oxygen_capacity_in_blood: { value: String(vo2Val) },
+    };
+
+    var out = {};
+    MEASUREMENT_SPECS.forEach(function (spec) {
+      var def = defaultsMap[spec.id] || { value: "—" };
+      out[spec.id] = {
+        id: spec.id,
+        name: spec.name,
+        dataType: spec.dataType,
+        unit: spec.unit,
+        representation: spec.representation,
+        threshold: spec.threshold,
+        category: spec.category,
+        chartType: spec.chartType,
+        source: spec.category === "baseline" ? "PROFILE OR EXAMPLE PLACEHOLDER" : "SIMULATED TELEMETRY",
+        value: def.value,
+        series: def.series ? def.series.slice() : null,
+        seriesSecondary: def.seriesSecondary ? def.seriesSecondary.slice() : null,
+        seriesLabels: def.seriesLabels ? def.seriesLabels.slice() : null,
+      };
+    });
+    return out;
+  }
+
+  function loadStoredMeasurements(astronautId, astronaut, slotIndex) {
+    var base = buildDefaultMeasurementsForAstronaut(astronaut, slotIndex);
+    try {
+      var raw = window.localStorage.getItem(MEASUREMENTS_STORAGE_KEY);
+      if (!raw) return base;
+      var parsed = JSON.parse(raw);
+      var astroStore = parsed && parsed[astronautId];
+      if (!astroStore || typeof astroStore !== "object") return base;
+      Object.keys(base).forEach(function (id) {
+        if (astroStore[id] && typeof astroStore[id] === "object") {
+          var stored = astroStore[id];
+          var candidate = Object.assign({}, base[id], stored, {
+            name: base[id].name,
+            dataType: base[id].dataType,
+            unit: base[id].unit,
+            threshold: base[id].threshold,
+            representation: base[id].representation,
+            category: base[id].category,
+            chartType: base[id].chartType,
+            source: base[id].source,
+            series:
+              Array.isArray(stored.series) && stored.series.length > 0
+                ? stored.series
+                : base[id].series,
+            seriesSecondary:
+              Array.isArray(stored.seriesSecondary) && stored.seriesSecondary.length > 0
+                ? stored.seriesSecondary
+                : base[id].seriesSecondary,
+            seriesLabels:
+              Array.isArray(stored.seriesLabels) && stored.seriesLabels.length > 0
+                ? stored.seriesLabels
+                : base[id].seriesLabels,
+          });
+          // Ensure stored dynamic telemetry never auto-triggers a Yellow/Red warning on startup
+          if (base[id].chartType !== "const" && getMeasurementAlertLevel(candidate) !== "normal") {
+            return;
+          }
+          base[id] = candidate;
+        }
+      });
+      return base;
+    } catch (_e) {
+      return base;
+    }
+  }
+
+  function saveStoredMeasurements(astronautId, measurementsObj) {
+    try {
+      var raw = window.localStorage.getItem(MEASUREMENTS_STORAGE_KEY);
+      var parsed = raw ? JSON.parse(raw) : {};
+      parsed[astronautId] = measurementsObj;
+      window.localStorage.setItem(MEASUREMENTS_STORAGE_KEY, JSON.stringify(parsed));
+    } catch (_e) {
+      // Ignore storage quota errors.
+    }
+  }
+
+  function getSeriesDelta(series) {
+    if (!Array.isArray(series) || series.length < 2) return 0;
+    var minV = Math.min.apply(null, series);
+    var maxV = Math.max.apply(null, series);
+    return maxV - minV;
+  }
+
+  function getRecentSeriesDelta(series, windowLen) {
+    if (!Array.isArray(series) || series.length < 2) return 0;
+    var sub = series.slice(-Math.max(2, windowLen || 5));
+    var minV = Math.min.apply(null, sub);
+    var maxV = Math.max.apply(null, sub);
+    return maxV - minV;
+  }
+
+  // Exact 1..36 importance map matching MEASUREMENT_SPECS order
+  var MEASUREMENT_PRIORITY_MAP = {};
+  MEASUREMENT_SPECS.forEach(function (spec, idx) {
+    MEASUREMENT_PRIORITY_MAP[spec.id] = idx + 1;
+  });
+
+  function getMeasurementAlertDetails(item) {
+    if (!item || !item.id) {
+      return { level: "normal", priority: 99, reason: "", instruction: "" };
+    }
+    var id = item.id;
+    var priority = MEASUREMENT_PRIORITY_MAP[id] || 36;
+    var rawVal = String(item.value !== undefined && item.value !== null ? item.value : "");
+    var numVal = parseFloat(rawVal);
+    var series = Array.isArray(item.series) ? item.series : null;
+    var recentDelta = getRecentSeriesDelta(series, 5);
+
+    if (id === "electrocardiogram") {
+      if (Number.isFinite(numVal)) {
+        if (numVal > 1.65 || numVal < 0.50) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Dangerous cardiac R-wave amplitude anomaly (" + rawVal + " mV; safe limit 0.50–1.65 mV)",
+            instruction: "Halt all physical exertion immediately, attach 12-lead diagnostic ECG monitor, and prepare automated defibrillator / anti-arrhythmic kit.",
+          };
+        }
+        if (numVal > 1.42 || numVal < 0.72) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning ECG R-wave amplitude shift detected (" + rawVal + " mV vs 1.18 mV baseline)",
+            instruction: "Rest in neutral microgravity posture and record a 30-second reference ECG strip.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "heart_rate") {
+      if (Number.isFinite(numVal)) {
+        if (numVal > 148 || numVal < 48 || recentDelta > 30) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Critical heart rate excursion (" + rawVal + " bpm; emergency threshold >148 or <48 bpm, or ΔHR >30 bpm)",
+            instruction: "Cease all EVA / exercise workload immediately, assume supine restraint position, administer 100% O₂, and open flight surgeon telemetry link.",
+          };
+        }
+        if (numVal >= 125 || numVal < 56 || recentDelta > 22) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning heart rate change detected (" + rawVal + " bpm; elevated above nominal 60–124 bpm envelope)",
+            instruction: "Reduce physical workload and monitor pulse recovery over the next 60 seconds.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "respiration_rate") {
+      if (Number.isFinite(numVal)) {
+        if (numVal > 26 || numVal < 8 || recentDelta > 8) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Dangerous respiratory rate instability (" + rawVal + " breaths/min; safe range 8–26 breaths/min)",
+            instruction: "Verify suit/cabin O₂ supply line and CO₂ scrubber cartridge immediately; initiate guided slow breathing.",
+          };
+        }
+        if (numVal >= 22 || numVal <= 10 || recentDelta > 6) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning respiration rate shift (" + rawVal + " breaths/min vs nominal 12–21 breaths/min)",
+            instruction: "Slow breathing cadence and inspect helmet ventilation airflow.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "metabolic_rate") {
+      if (Number.isFinite(numVal)) {
+        if (numVal > 250 || numVal < 55) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Critical metabolic expenditure spike (" + rawVal + "; exceeds safe LCVG thermal & O₂ capacity >250 kcal/h)",
+            instruction: "Abort high-exertion task immediately and increase Liquid Cooling Garment flow to maximum.",
+          };
+        }
+        if (numVal >= 198 || numVal < 68) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning metabolic rate elevation (" + rawVal + "; elevated above 198 kcal/h threshold)",
+            instruction: "Pace physical activity to prevent thermal and CO₂ buildup.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "oxygen_level_in_blood") {
+      if (Number.isFinite(numVal)) {
+        if (numVal < 92.5 || numVal > 100 || recentDelta >= 5.0) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Dangerous blood oxygen desaturation (" + rawVal + "% SpO₂; critical hypoxia threshold <92.5%)",
+            instruction: "Switch suit/mask regulator to 100% emergency O₂ purge immediately and verify cabin pressure.",
+          };
+        }
+        if (numVal < 95.8 || recentDelta >= 3.0) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning dip in blood oxygen saturation (" + rawVal + "% SpO₂ vs 97–99% nominal)",
+            instruction: "Take deep controlled breaths and check pulse oximeter sensor contact.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "pressure_inside_veins") {
+      if (Number.isFinite(numVal)) {
+        if (numVal > 9.5 || numVal < 1.5) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Dangerous central venous pressure deviation (" + rawVal + " mmHg; critical limit >9.5 or <1.5 mmHg)",
+            instruction: "Activate lower-body negative pressure (LBNP) countermeasure and contact medical control.",
+          };
+        }
+        if (numVal > 7.8 || numVal < 2.5) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning venous pressure shift (" + rawVal + " mmHg vs nominal 3.5–7.8 mmHg)",
+            instruction: "Check hydration status and suit cuff compression.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "pressure") {
+      var parts = rawVal.split("/");
+      var sys = parseFloat(parts[0]);
+      var dia = parts.length > 1 ? parseFloat(parts[1]) : 75;
+      if (Number.isFinite(sys)) {
+        if (!Number.isFinite(dia)) dia = 75;
+        var diaRecentDelta = getRecentSeriesDelta(item.seriesSecondary, 5);
+        if (sys > 155 || sys < 85 || dia > 96 || dia < 52 || recentDelta > 25 || diaRecentDelta > 20) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Dangerous arterial blood pressure (" + rawVal + " mmHg; breached emergency limit >155/96 or <85/52 mmHg)",
+            instruction: "Stop all exertion immediately, secure astronaut in restraint chair, and initiate continuous cuff verification.",
+          };
+        }
+        if (sys > 138 || sys < 94 || dia > 88 || dia < 58 || recentDelta > 18 || diaRecentDelta > 15) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning blood pressure change (" + rawVal + " mmHg; outside nominal 94/58–138/88 mmHg envelope)",
+            instruction: "Rest quietly for 5 minutes and re-verify systolic/diastolic trend.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "co2_level") {
+      if (Number.isFinite(numVal)) {
+        if (numVal > 4.25 || numVal < 1.0) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Dangerous CO₂ accumulation (" + rawVal + "; exceeds hypercapnia safety limit >4.25 mmHg)",
+            instruction: "Switch to backup LiOH / amine CO₂ scrubber loop immediately and open emergency O₂ bypass.",
+          };
+        }
+        if (numVal > 3.50) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning rise in CO₂ level (" + rawVal + "; exceeds 3.50 mmHg warning threshold)",
+            instruction: "Increase helmet/cabin ventilation fan speed and inspect CO₂ scrubber canister.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "oxygen_left") {
+      if (Number.isFinite(numVal)) {
+        if (numVal < 25 || numVal > 100) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Critical O₂ reserve depletion (" + rawVal + "; below 25% emergency reserve)",
+            instruction: "Abort EVA / isolated module operations immediately, connect umbilical O₂ feed, and switch to secondary O₂ tank.",
+          };
+        }
+        if (numVal < 40) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning O₂ reserve level (" + rawVal + "; below 40% warning threshold)",
+            instruction: "Begin return-to-airlock protocol and monitor O₂ consumption rate.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "temp_inside_costume") {
+      if (Number.isFinite(numVal)) {
+        if (numVal > 24.5 || numVal < 17.5 || recentDelta > 2.5) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Dangerous suit internal temperature (" + rawVal + " °C; thermal runaway / cooling failure outside 17.5–24.5 °C)",
+            instruction: "Engage backup sublimator cooling loop immediately and terminate external heat load exposure.",
+          };
+        }
+        if (numVal > 23.3 || numVal < 18.8 || recentDelta > 1.8) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning suit internal temperature drift (" + rawVal + " °C vs 19.0–22.6 °C nominal)",
+            instruction: "Adjust LCVG water cooling valve and reduce metabolic heat output.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "temp_outside_costume") {
+      if (Number.isFinite(numVal)) {
+        var lastStep =
+          series && series.length >= 2 ? Math.abs(series[series.length - 1] - series[series.length - 2]) : 0;
+        var inSpaceshipSuitBand = numVal >= 18.0 && numVal <= 23.0 && lastStep <= 6.0;
+        var inOuterSpaceSuitBand = numVal >= -273.15 && numVal <= -260.0 && lastStep <= 6.0;
+        if (inSpaceshipSuitBand || inOuterSpaceSuitBand) {
+          return { level: "normal", priority: priority, reason: "", instruction: "" };
+        }
+        if (numVal > 40.0 || (numVal < -65.0 && numVal > -245.0) || lastStep > 10.0) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Extreme external thermal shock (" + rawVal + " °C; exceeds suit insulation safety margin)",
+            instruction: "Relocate to shaded/thermally shielded structure immediately and inspect outer MLI suit layer.",
+          };
+        }
+        if (
+          (numVal >= 14.0 && numVal < 18.0) ||
+          (numVal > 23.0 && numVal <= 40.0) ||
+          (numVal <= -35.0 && numVal >= -65.0) ||
+          (numVal > -260.0 && numVal <= -245.0) ||
+          lastStep > 6.0
+        ) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning external temperature swing (" + rawVal + " °C; high orbital thermal gradient)",
+            instruction: "Monitor suit sublimator feedwater consumption during sunlit pass.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "battery_level") {
+      if (Number.isFinite(numVal)) {
+        if (numVal < 20 || numVal > 100) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Critical battery power depletion (" + rawVal + "%; below 20% life-support reserve)",
+            instruction: "Connect spacecraft umbilical power tether immediately and shed non-essential avionics loads.",
+          };
+        }
+        if (numVal < 35) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning battery discharge level (" + rawVal + "%; below 35% warning threshold)",
+            instruction: "Prepare backup battery pack or return to charging station.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "radiation_exposure") {
+      if (Number.isFinite(numVal)) {
+        var radStep =
+          series && series.length >= 2 ? Math.abs(series[series.length - 1] - series[series.length - 2]) : 0;
+        if (numVal > 0.085 || radStep > 0.015) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Dangerous ionizing radiation spike (" + rawVal + " R; exceeds >0.085 R/sol or Δ >0.015 R/5s solar particle limit)",
+            instruction: "Proceed immediately to heavily shielded storm shelter module, orient water-wall shielding, and close viewport shutters.",
+          };
+        }
+        if (numVal > 0.055 || radStep > 0.006) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning radiation exposure elevation (" + rawVal + " R vs <0.055 R/sol nominal röntgen envelope)",
+            instruction: "Minimize time near hull exterior and verify personal röntgen dosimeter log.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "skin_surface") {
+      if (Number.isFinite(numVal)) {
+        if (numVal > 37.9 || numVal < 35.0 || recentDelta > 1.5) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Critical skin surface temperature (" + rawVal + " °C; hyperthermia/hypothermia risk outside 35.0–37.9 °C)",
+            instruction: "Initiate active thermal countermeasure (cooling garment or warming blanket) and check core temperature.",
+          };
+        }
+        if (numVal > 37.2 || numVal < 35.7 || recentDelta > 1.0) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning skin surface temperature change (" + rawVal + " °C vs 36.0–37.1 °C nominal)",
+            instruction: "Check thermal garment flow temperature and hydration.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "outside_temperature") {
+      if (Number.isFinite(numVal)) {
+        var inSpaceshipCabBand = numVal >= 19.5 && numVal <= 23.2 && recentDelta <= 2.0;
+        var inOuterSpaceBand = numVal >= -273.15 && numVal <= -260.0 && recentDelta <= 2.0;
+        if (inSpaceshipCabBand || inOuterSpaceBand) {
+          return { level: "normal", priority: priority, reason: "", instruction: "" };
+        }
+        if (numVal > 25.0 || (numVal < 18.0 && numVal > -245.0) || recentDelta > 3.0) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Dangerous outside / habitat temperature anomaly (" + rawVal + " °C; thermal control loop fault)",
+            instruction: "Switch cabin/suit ECLSS heat exchanger to secondary loop and inspect ammonia radiator bypass.",
+          };
+        }
+        if (
+          (numVal > 23.2 && numVal <= 25.0) ||
+          (numVal >= 18.0 && numVal < 19.5) ||
+          (numVal <= -245.0 && numVal > -260.0) ||
+          recentDelta > 2.0
+        ) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning outside / habitat temperature drift (" + rawVal + " °C vs nominal thermal envelope)",
+            instruction: "Verify thermal control circulation and insulation setpoint.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "humidity") {
+      if (Number.isFinite(numVal)) {
+        if (numVal > 60.0 || numVal < 25.0 || recentDelta > 15.0) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Critical cabin humidity imbalance (" + rawVal + "%; condensation / avionics hazard outside 25–60%)",
+            instruction: "Engage backup water separator assembly and inspect cabin condensing heat exchanger.",
+          };
+        }
+        if (numVal > 52.0 || numVal < 34.0 || recentDelta > 10.0) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning cabin humidity change (" + rawVal + "% vs 40–50% nominal)",
+            instruction: "Check cabin dehumidifier condensate line.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "sleep_amount") {
+      if (Number.isFinite(numVal)) {
+        if (numVal < 5.5 || numVal > 10.5) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Critical sleep deficit (" + rawVal + " hours/sol; >2 hours/sol below 7.5 hours/sol circadian baseline)",
+            instruction: "Reschedule high-risk EVA/robotics tasks and mandate recovery sleep block.",
+          };
+        }
+        if (numVal < 6.5 || numVal > 9.2) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning sleep duration change (" + rawVal + " hours/sol vs 7.5 hours/sol target)",
+            instruction: "Adjust cabin circadian lighting schedule before next sol sleep shift.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    if (id === "exercise_activity") {
+      if (Number.isFinite(numVal)) {
+        if (numVal < 63 || numVal > 150) {
+          return {
+            level: "red",
+            priority: priority,
+            reason: "Critical countermeasure exercise deviation (" + rawVal + "; >30% below 90 min/sol bone/muscle target)",
+            instruction: "Schedule mandatory ARED resistive + T2 treadmill session to prevent microgravity bone/muscle loss.",
+          };
+        }
+        if (numVal < 74 || numVal > 130) {
+          return {
+            level: "yellow",
+            priority: priority,
+            reason: "Concerning exercise activity deviation (" + rawVal + " vs 90 min/sol target)",
+            instruction: "Complete remaining aerobic/resistive protocol before end of current sol.",
+          };
+        }
+      }
+      return { level: "normal", priority: priority, reason: "", instruction: "" };
+    }
+
+    return { level: "normal", priority: priority, reason: "", instruction: "" };
+  }
+
+  function getMeasurementAlertLevel(item) {
+    return getMeasurementAlertDetails(item).level;
+  }
+
+  var TEST_WARNING_PRESETS = {
+    heart_rate: {
+      yellow: {
+        value: "132",
+        series: [82, 86, 92, 98, 104, 110, 115, 118, 121, 124, 126, 128, 129, 130, 131, 130, 131, 132, 131, 132],
+      },
+      red: {
+        value: "158",
+        series: [88, 95, 104, 112, 120, 128, 135, 142, 146, 150, 152, 154, 155, 156, 157, 156, 157, 158, 157, 158],
+      },
+    },
+    pressure: {
+      yellow: {
+        value: "142/90",
+        series: [118, 120, 122, 125, 128, 130, 132, 134, 136, 138, 139, 140, 141, 141, 142, 141, 142, 142, 141, 142],
+        seriesSecondary: [76, 77, 78, 80, 81, 82, 84, 85, 86, 87, 88, 88, 89, 89, 90, 89, 90, 90, 89, 90],
+      },
+      red: {
+        value: "164/102",
+        series: [120, 125, 130, 136, 142, 146, 150, 154, 156, 158, 160, 161, 162, 163, 163, 164, 163, 164, 164, 164],
+        seriesSecondary: [78, 80, 83, 86, 89, 92, 94, 96, 98, 99, 100, 100, 101, 101, 102, 101, 102, 102, 101, 102],
+      },
+    },
+    oxygen_level_in_blood: {
+      yellow: {
+        value: "94.8",
+        series: [98.4, 98.2, 97.9, 97.5, 97.1, 96.8, 96.4, 96.0, 95.7, 95.4, 95.2, 95.0, 94.9, 94.8, 94.9, 94.8, 94.8, 94.9, 94.8, 94.8],
+      },
+      red: {
+        value: "89.4",
+        series: [97.5, 96.8, 96.0, 95.1, 94.2, 93.4, 92.6, 91.8, 91.2, 90.6, 90.2, 89.9, 89.7, 89.5, 89.4, 89.5, 89.4, 89.3, 89.4, 89.4],
+      },
+    },
+    co2_level: {
+      yellow: {
+        value: "3.78 mmHg (4974 ppm)",
+        series: [2.75, 2.88, 3.02, 3.15, 3.28, 3.40, 3.52, 3.60, 3.66, 3.70, 3.73, 3.75, 3.76, 3.77, 3.78, 3.78],
+      },
+      red: {
+        value: "4.65 mmHg (6118 ppm)",
+        series: [2.90, 3.15, 3.40, 3.65, 3.90, 4.10, 4.25, 4.38, 4.46, 4.52, 4.56, 4.60, 4.62, 4.64, 4.65, 4.65],
+      },
+    },
+    radiation_exposure: {
+      yellow: {
+        value: "0.068",
+        series: [0.038, 0.041, 0.046, 0.052, 0.058, 0.063, 0.068],
+      },
+      red: {
+        value: "0.145",
+        series: [0.040, 0.056, 0.075, 0.096, 0.116, 0.132, 0.145],
+      },
+    },
+    electrocardiogram: {
+      yellow: {
+        value: "1.48",
+        series: [
+          0.20, -0.18, 1.48, -0.34, 0.30,
+          0.20, -0.18, 1.47, -0.33, 0.29,
+          0.21, -0.19, 1.48, -0.34, 0.30,
+          0.20, -0.18, 1.46, -0.33, 0.29,
+          0.20, -0.18, 1.48, -0.34, 0.30,
+        ],
+      },
+      red: {
+        value: "1.78",
+        series: [
+          0.26, -0.24, 1.78, -0.42, 0.36,
+          0.25, -0.23, 1.76, -0.41, 0.35,
+          0.26, -0.24, 1.78, -0.42, 0.36,
+          0.25, -0.24, 1.77, -0.41, 0.35,
+          0.26, -0.24, 1.78, -0.42, 0.36,
+        ],
+      },
+    },
+    respiration_rate: {
+      yellow: {
+        value: "23",
+        series: [14, 15, 16, 18, 19, 20, 21, 22, 22, 23, 23, 23],
+      },
+      red: {
+        value: "30",
+        series: [15, 17, 19, 22, 24, 26, 27, 28, 29, 30, 30, 30],
+      },
+    },
+    oxygen_left: {
+      yellow: { value: "34.20% (205 L / 101.2 kPa)" },
+      red: { value: "18.50% (111 L / 100.8 kPa)" },
+    },
+    battery_level: {
+      yellow: { value: "28.40" },
+      red: { value: "14.20" },
+    },
+    temp_inside_costume: {
+      yellow: {
+        value: "23.7",
+        series: [21.8, 22.0, 22.2, 22.5, 22.7, 22.9, 23.1, 23.2, 23.4, 23.5, 23.6, 23.6, 23.7, 23.7, 23.7, 23.7],
+      },
+      red: {
+        value: "25.4",
+        series: [22.0, 22.4, 22.8, 23.2, 23.6, 24.0, 24.3, 24.6, 24.8, 25.0, 25.1, 25.2, 25.3, 25.4, 25.4, 25.4],
+      },
+    },
+    temp_outside_costume: {
+      yellow: {
+        value: "16.8",
+        series: [-12.0, -8.5, -4.0, 0.5, 4.2, 7.5, 10.2, 12.4, 14.0, 15.1, 15.8, 16.2, 16.5, 16.7, 16.8, 16.8],
+      },
+      red: {
+        value: "44.5",
+        series: [5.0, 10.0, 16.0, 22.0, 27.5, 32.0, 35.5, 38.2, 40.5, 42.0, 43.0, 43.6, 44.0, 44.3, 44.5, 44.5],
+      },
+    },
+    pressure_inside_veins: {
+      yellow: { value: "8.4" },
+      red: { value: "10.6" },
+    },
+    metabolic_rate: {
+      yellow: { value: "215.0 kcal/h (250 W)" },
+      red: { value: "278.0 kcal/h (323 W)" },
+    },
+    skin_surface: {
+      yellow: {
+        value: "37.5",
+        series: [36.4, 36.5, 36.7, 36.8, 37.0, 37.1, 37.2, 37.3, 37.4, 37.4, 37.5, 37.5],
+      },
+      red: {
+        value: "38.4",
+        series: [36.5, 36.8, 37.1, 37.4, 37.6, 37.8, 38.0, 38.1, 38.2, 38.3, 38.4, 38.4],
+      },
+    },
+    outside_temperature: {
+      yellow: {
+        value: "23.8",
+        series: [21.4, 21.7, 22.0, 22.3, 22.6, 22.9, 23.2, 23.4, 23.6, 23.7, 23.8, 23.8],
+      },
+      red: {
+        value: "26.2",
+        series: [21.6, 22.2, 22.8, 23.5, 24.1, 24.7, 25.2, 25.6, 25.9, 26.1, 26.2, 26.2],
+      },
+    },
+    humidity: {
+      yellow: {
+        value: "54.5",
+        series: [44.0, 45.5, 47.0, 48.5, 50.0, 51.2, 52.4, 53.2, 53.8, 54.2, 54.5, 54.5],
+      },
+      red: {
+        value: "64.0",
+        series: [45.0, 48.0, 51.0, 54.0, 56.5, 58.8, 60.5, 61.8, 62.8, 63.5, 64.0, 64.0],
+      },
+    },
+    sleep_amount: {
+      yellow: {
+        value: "6.0",
+        series: [7.8, 7.2, 8.0, 6.9, 7.4, 7.6, 6.0],
+      },
+      red: {
+        value: "4.8",
+        series: [7.8, 7.2, 8.0, 6.9, 7.4, 7.6, 4.8],
+      },
+    },
+    exercise_activity: {
+      yellow: {
+        value: "68 min/sol (483 kcal/sol)",
+        series: [85, 90, 95, 80, 90, 100, 68],
+      },
+      red: {
+        value: "52 min/sol (369 kcal/sol)",
+        series: [85, 90, 95, 80, 90, 100, 52],
+      },
+    },
+  };
+
+  var WARNING_LOGS_STORAGE_KEY = "ahs_warning_logs_v3";
+
+  function getCountermeasuresForWarning(specId, severity, fallbackInstruction) {
+    if (fallbackInstruction && String(fallbackInstruction).trim()) {
+      return String(fallbackInstruction).trim();
+    }
+    var isRed = severity === "red";
+    var map = {
+      electrocardiogram: isRed
+        ? "1. Halt all physical exertion immediately and secure astronaut in restraint harness. 2. Attach 12-lead diagnostic ECG monitor and prepare automated external defibrillator (AED) + emergency anti-arrhythmic kit. 3. Administer 100% O₂ and open live flight surgeon telemetry channel."
+        : "1. Pause physical workload and assume neutral microgravity posture. 2. Check chest ECG electrode adhesion and lead impedance. 3. Record a 30-second reference ECG strip for flight surgeon review.",
+      heart_rate: isRed
+        ? "1. Cease all EVA / exercise workload immediately and restrain in supine microgravity posture. 2. Administer 100% emergency O₂ purge and increase LCVG cooling to maximum. 3. If HR <= 5 bpm (asystole), initiate CPR / defibrillation protocol and alert flight surgeon."
+        : "1. Reduce physical exertion cadence and rest for 60–120 seconds. 2. Hydrate with 250 mL electrolyte solution via drink bag. 3. Monitor pulse recovery toward 75–90 bpm baseline.",
+      oxygen_level_in_blood: isRed
+        ? "1. Switch suit/mask regulator to 100% emergency O₂ purge flow immediately. 2. Verify suit/cabin total pressure and inspect O₂ umbilical line for kinks or leaks. 3. Abort EVA or isolate affected cabin module."
+        : "1. Perform slow, deep diaphragmatic breathing for 60 seconds. 2. Verify helmet visor airflow and pulse oximeter sensor placement. 3. Increase O₂ partial pressure regulator slightly if SpO₂ remains <96%.",
+      pressure: isRed
+        ? "1. Stop all physical activity immediately and secure astronaut in restraint chair. 2. Run continuous cuff verification; if hypotensive (<85/52 mmHg), engage lower-body compression garment and IV/oral fluid bolus; if hypertensive (>155/96 mmHg), administer prescribed vasodilator/antihypertensive per flight surgeon."
+        : "1. Rest quietly in neutral posture for 5 minutes and re-verify systolic/diastolic trend. 2. Reduce sodium intake and verify fluid-loading balance for current sol.",
+      respiration_rate: isRed
+        ? "1. Verify suit/cabin O₂ supply line and LiOH/amine CO₂ scrubber cartridge immediately. 2. Switch to backup ventilation loop and guide paced breathing (12–15 breaths/min)."
+        : "1. Slow breathing cadence using guided 4-second inhale / 4-second exhale protocol. 2. Inspect helmet ventilation fan airflow and CO₂ sensor reading.",
+      oxygen_left: isRed
+        ? "1. Abort EVA / isolated module operations immediately and return to airlock. 2. Connect spacecraft umbilical O₂ feed and open secondary emergency O₂ reserve tank."
+        : "1. Begin return-to-airlock protocol and reduce metabolic exertion to conserve O₂. 2. Cross-check primary tank pressure regulator and reserve valve.",
+      co2_level: isRed
+        ? "1. Switch to backup LiOH / amine CO₂ scrubber loop immediately. 2. Open emergency O₂ helmet purge bypass to flush accumulated CO₂."
+        : "1. Increase helmet/cabin ventilation fan speed to high. 2. Inspect CO₂ scrubber canister saturation indicator and schedule cartridge swap.",
+      battery_level: isRed
+        ? "1. Connect spacecraft umbilical power tether immediately. 2. Shed all non-essential avionics/lighting loads to preserve life-support ECLSS/LCVG power."
+        : "1. Activate power-saving mode on auxiliary suit/module systems. 2. Prepare backup battery pack or return to charging station.",
+      radiation_exposure: isRed
+        ? "1. Relocate immediately to heavily shielded storm shelter module. 2. Orient water-wall / polyethylene radiation shielding and close all viewport shutters. 3. Log cumulative röntgen dose and administer radioprotective countermeasure if prescribed."
+        : "1. Minimize time near hull exterior or unshielded viewports during SAA / solar flux pass. 2. Verify personal röntgen dosimeter badge and apply localized shielding.",
+      temp_inside_costume: isRed
+        ? "1. Engage backup sublimator / LCVG cooling loop immediately at 100% flow. 2. Terminate external thermal heat load exposure and halt physical exertion."
+        : "1. Adjust Liquid Cooling and Ventilation Garment (LCVG) water mixing valve cooler. 2. Reduce metabolic workload and check coolant pump flow rate.",
+      temp_outside_costume: isRed
+        ? "1. Relocate immediately to shaded / thermally shielded spacecraft structure. 2. Inspect outer Multi-Layer Insulation (MLI) suit layer and monitor sublimator water usage."
+        : "1. Rotate work orientation to avoid direct solar radiative heating or deep-shadow chill. 2. Monitor LCVG inlet/outlet temperature differential.",
+      pressure_inside_veins: isRed
+        ? "1. Activate Lower-Body Negative Pressure (LBNP) countermeasure device immediately. 2. Adjust thigh venous occlusion cuffs and contact medical control."
+        : "1. Check hydration status and adjust suit compression cuff tension. 2. Perform gentle lower-extremity muscle pump contractions.",
+      metabolic_rate: isRed
+        ? "1. Abort high-exertion task immediately and rest in restraint harness. 2. Set LCVG cooling flow and helmet ventilation to maximum to clear excess heat and CO₂."
+        : "1. Pace physical task cadence to keep metabolic expenditure below 185 kcal/h. 2. Sip cool water from suit hydration bag.",
+      skin_surface: isRed
+        ? "1. Initiate active thermal countermeasure (maximize LCVG cooling water flow if >37.9 °C, or activate suit heater / thermal blanket if <35.0 °C). 2. If caused by high radiation exposure, apply topical soothing hydrogel and move to radiation shelter."
+        : "1. Adjust LCVG thermal garment flow temperature by 1–2 °C. 2. Re-check core body temperature and radiation dosimeter reading.",
+      outside_temperature: isRed
+        ? "1. Switch cabin ECLSS heat exchanger to secondary coolant loop immediately. 2. Inspect external ammonia radiator bypass valve and isolate faulty thermal zone."
+        : "1. Verify cabin air circulation ducting and adjust module thermostat setpoint to 21.4 °C.",
+      humidity: isRed
+        ? "1. Engage backup rotary water separator assembly immediately. 2. Inspect cabin condensing heat exchanger to prevent avionics condensation hazard."
+        : "1. Increase cabin dehumidifier fan speed and inspect condensate collection line.",
+      sleep_amount: isRed
+        ? "1. Reschedule all high-risk EVA and robotics operations for current sol. 2. Mandate an uninterrupted 8.5-hour recovery sleep block with blue-depleted circadian lighting."
+        : "1. Adjust cabin circadian lighting schedule (450 nm blue light suppressed 2 hours pre-sleep) and schedule a 45-minute recovery nap.",
+      exercise_activity: isRed
+        ? "1. Schedule mandatory ARED resistive + T2 treadmill countermeasure session (90 min/sol) to prevent microgravity bone demineralization and muscle atrophy."
+        : "1. Complete remaining aerobic/resistive exercise protocol before end of current sol.",
+    };
+    return (
+      map[specId] ||
+      "1. Reduce physical workload and verify sensor calibration. 2. Apply standard ECLSS/medical countermeasure protocol and notify flight surgeon."
+    );
+  }
+
+  function computeRecentRecordsStats(seriesArr) {
+    if (!Array.isArray(seriesArr) || seriesArr.length === 0) {
+      return { min: 0, max: 0, mean: 0, netDelta: 0, maxStep: 0, maxStepDelta: 0 };
+    }
+    var nums = seriesArr
+      .map(function (n) {
+        return typeof n === "number" ? n : parseFloat(n);
+      })
+      .filter(function (n) {
+        return Number.isFinite(n);
+      });
+    if (nums.length === 0) {
+      return { min: 0, max: 0, mean: 0, netDelta: 0, maxStep: 0, maxStepDelta: 0 };
+    }
+    var minV = Math.min.apply(null, nums);
+    var maxV = Math.max.apply(null, nums);
+    var sum = nums.reduce(function (acc, v) {
+      return acc + v;
+    }, 0);
+    var meanV = sum / nums.length;
+    var netDelta = nums.length >= 2 ? nums[nums.length - 1] - nums[0] : 0;
+    var maxStep = 0;
+    for (var i = 1; i < nums.length; i++) {
+      var st = Math.abs(nums[i] - nums[i - 1]);
+      if (st > maxStep) maxStep = st;
+    }
+    var roundedStep = Number(maxStep.toFixed(3));
+    return {
+      min: Number(minV.toFixed(3)),
+      max: Number(maxV.toFixed(3)),
+      mean: Number(meanV.toFixed(3)),
+      netDelta: Number(netDelta.toFixed(3)),
+      maxStep: roundedStep,
+      maxStepDelta: roundedStep,
+    };
+  }
+
+  function normalizeWarningLogEntry(raw, idx, fallbackSol) {
+    if (!raw || typeof raw !== "object") return null;
+    var specId = raw.specId || "heart_rate";
+    var matchedSpec =
+      MEASUREMENT_SPECS.find(function (s) {
+        return s.id === specId;
+      }) || MEASUREMENT_SPECS[1] || MEASUREMENT_SPECS[0];
+    var uniqueId = String(raw.id || raw.logId || "WLOG-SEED-" + (idx + 1) + "-" + specId);
+    var recsRaw = Array.isArray(raw.recentRecords)
+      ? raw.recentRecords
+      : Array.isArray(raw.recentSeries)
+      ? raw.recentSeries
+      : [];
+    var recs = recsRaw
+      .map(function (v) {
+        return typeof v === "number" ? v : parseFloat(v);
+      })
+      .filter(function (n) {
+        return Number.isFinite(n);
+      });
+    var secRaw = Array.isArray(raw.recentSecondary) ? raw.recentSecondary : null;
+    var sec = secRaw
+      ? secRaw
+          .map(function (v) {
+            return typeof v === "number" ? v : parseFloat(v);
+          })
+          .filter(function (n) {
+            return Number.isFinite(n);
+          })
+      : null;
+    var lbls = Array.isArray(raw.recentLabels) ? raw.recentLabels.slice() : [];
+    if (lbls.length < recs.length) {
+      lbls = recs.map(function (_, i) {
+        var rem = recs.length - 1 - i;
+        return rem === 0 ? "Trigger" : "-" + rem + "s";
+      });
+    }
+    var trigVal =
+      raw.triggerValue !== undefined && raw.triggerValue !== null
+        ? String(raw.triggerValue)
+        : raw.triggeredValue !== undefined && raw.triggeredValue !== null
+        ? String(raw.triggeredValue)
+        : recs.length > 0
+        ? String(recs[recs.length - 1])
+        : "N/A";
+
+    return {
+      id: uniqueId,
+      specId: specId,
+      source:
+        raw.source ||
+        (uniqueId.indexOf("WLOG-SEED-") === 0 ? "SIMULATED SAMPLE" : "SIMULATED TELEMETRY"),
+      measurementName: String(raw.measurementName || raw.parameterName || matchedSpec.name || "Parameter"),
+      priority: Number(raw.priority || MEASUREMENT_PRIORITY_MAP[specId] || 1),
+      severity: raw.severity === "red" ? "red" : "yellow",
+      status: String(raw.status || "Under Review"),
+      sol: Number(raw.sol || fallbackSol || 142),
+      timestamp: String(raw.timestamp || "15/11/2026 09:42:18"),
+      triggerValue: trigVal,
+      initialTriggerValue: String(raw.initialTriggerValue || trigVal),
+      peakValue: String(raw.peakValue || trigVal),
+      updateCount: Number(raw.updateCount || 1),
+      unit: String(raw.unit || matchedSpec.unit || ""),
+      thresholdRule: String(raw.thresholdRule || matchedSpec.threshold || ""),
+      reason: String(raw.reason || "Concerning telemetry change detected."),
+      chartType: String(raw.chartType || matchedSpec.chartType || "line"),
+      recentRecords: recs,
+      recentSecondary: sec && sec.length > 0 ? sec : null,
+      recentLabels: lbls,
+      concurrentSnapshot: String(raw.concurrentSnapshot || raw.contextSnapshot || "N/A"),
+      countermeasures: String(
+        raw.countermeasures || getCountermeasuresForWarning(specId, raw.severity, raw.instruction)
+      ),
+      isAdditionalCritical: Boolean(raw.isAdditionalCritical),
+      analysisNotes: String(raw.analysisNotes || ""),
+      manuallyEdited: Boolean(raw.manuallyEdited),
+    };
+  }
+
+  function buildDefaultWarningLogs(astronaut) {
+    var solNum = (astronaut && astronaut.missionDay) || 142;
+    var seeds = [
+      {
+        id: "WLOG-SEED-1",
+        specId: "heart_rate",
+        measurementName: "Heart rate",
+        priority: 2,
+        severity: "yellow",
+        status: "Under Review",
+        sol: solNum,
+        timestamp: "15/11/2026 09:42:18",
+        triggerValue: "128",
+        initialTriggerValue: "125",
+        peakValue: "128",
+        updateCount: 2,
+        unit: "bpm",
+        thresholdRule: "Δ HR > 30 bpm within 30s",
+        reason: "Concerning heart rate change detected (128 bpm; elevated above nominal 60–124 bpm envelope)",
+        chartType: "line",
+        recentRecords: [84, 89, 95, 102, 108, 114, 119, 123, 126, 128],
+        recentLabels: ["-9s", "-8s", "-7s", "-6s", "-5s", "-4s", "-3s", "-2s", "-1s", "Trigger"],
+        concurrentSnapshot: "HR: 128 bpm | BP: 124/79 mmHg | SpO2: 97.8% | RR: 19 breaths/min | Suit Temp: 22.4 °C | Rad: 0.039 R",
+        analysisNotes:
+          "Transient tachycardia observed during peak ARED resistive squat set. Recent 10-second records show smooth +4.4 bpm/s ramp without ectopic beats.",
+      },
+      {
+        id: "WLOG-SEED-2",
+        specId: "radiation_exposure",
+        measurementName: "Radiation exposure",
+        priority: 9,
+        severity: "yellow",
+        status: "Monitoring",
+        sol: solNum,
+        timestamp: "15/11/2026 08:15:05",
+        triggerValue: "0.068",
+        initialTriggerValue: "0.058",
+        peakValue: "0.068",
+        updateCount: 3,
+        unit: "R (röntgen)",
+        thresholdRule: "Δ Radiation > 0.006 R within 5s or > 0.055 R/sol (Warning) | > 0.085 R/sol (SOS)",
+        reason: "Concerning radiation exposure elevation (0.068 R vs <0.055 R/sol nominal röntgen envelope)",
+        chartType: "line",
+        recentRecords: [0.038, 0.041, 0.045, 0.050, 0.056, 0.062, 0.068],
+        recentLabels: ["-6s", "-5s", "-4s", "-3s", "-2s", "-1s", "Trigger"],
+        concurrentSnapshot: "HR: 76 bpm | BP: 116/75 mmHg | SpO2: 98.6% | RR: 14 breaths/min | Suit Temp: 21.5 °C | Rad: 0.068 R",
+        analysisNotes:
+          "South Atlantic Anomaly (SAA) orbital transit increased röntgen flux from 0.038 R to 0.068 R. Crew remained inside shielded module.",
+      },
+      {
+        id: "WLOG-SEED-3",
+        specId: "pressure",
+        measurementName: "Pressure",
+        priority: 4,
+        severity: "yellow",
+        status: "Resolved — Countermeasure Applied",
+        sol: Math.max(1, solNum - 1),
+        timestamp: "14/11/2026 19:28:40",
+        triggerValue: "148/94",
+        initialTriggerValue: "144/91",
+        peakValue: "148/94",
+        updateCount: 2,
+        unit: "mmHg",
+        thresholdRule: "Δ SYS > 22 mmHg or Δ DIA > 14 mmHg within 60s (142/90 Warning | 160/100 SOS)",
+        reason: "Concerning blood pressure elevation (148/94 mmHg; normal resting <142/90 mmHg)",
+        chartType: "line",
+        recentRecords: [122, 126, 131, 136, 141, 145, 148],
+        recentSecondary: [78, 80, 83, 86, 89, 92, 94],
+        recentLabels: ["-6s", "-5s", "-4s", "-3s", "-2s", "-1s", "Trigger"],
+        concurrentSnapshot: "HR: 112 bpm | BP: 148/94 mmHg | SpO2: 97.4% | RR: 20 breaths/min | Suit Temp: 22.8 °C | Rad: 0.038 R",
+        analysisNotes:
+          "Systolic/diastolic pressure rose to 148/94 mmHg during heavy lower-body exercise protocol; normalized within 3 minutes of cooldown.",
+      },
+    ];
+    return seeds.map(function (s, idx) {
+      return normalizeWarningLogEntry(s, idx, solNum);
+    });
+  }
+
+  function loadStoredWarningLogs(astronautId, astronaut) {
+    var solNum = (astronaut && astronaut.missionDay) || 142;
+    var fallback = buildDefaultWarningLogs(astronaut);
+    try {
+      var raw = window.localStorage.getItem(WARNING_LOGS_STORAGE_KEY);
+      if (!raw) return fallback;
+      var parsed = JSON.parse(raw);
+      var list = parsed && parsed[astronautId];
+      if (!Array.isArray(list) || list.length === 0) return fallback;
+      var seenIds = {};
+      return list
+        .map(function (entry, idx) {
+          var norm = normalizeWarningLogEntry(entry, idx, solNum);
+          if (!norm) return null;
+          if (seenIds[norm.id]) {
+            norm.id = norm.id + "-" + idx;
+          }
+          seenIds[norm.id] = true;
+          return norm;
+        })
+        .filter(Boolean);
+    } catch (_e) {
+      return fallback;
+    }
+  }
+
+  function saveStoredWarningLogs(astronautId, logsList) {
+    try {
+      var raw = window.localStorage.getItem(WARNING_LOGS_STORAGE_KEY);
+      var parsed = raw ? JSON.parse(raw) : {};
+      parsed[astronautId] = logsList;
+      window.localStorage.setItem(WARNING_LOGS_STORAGE_KEY, JSON.stringify(parsed));
+    } catch (_e) {
+      // Ignore storage quota errors.
+    }
+  }
+
+  function MeasurementLineChartSvg(props) {
+    var series = Array.isArray(props.series) && props.series.length > 0 ? props.series : [0, 1, 0];
+    var seriesSecondary =
+      Array.isArray(props.seriesSecondary) && props.seriesSecondary.length > 0 ? props.seriesSecondary : null;
+    var labels = Array.isArray(props.labels) ? props.labels : [];
+    var unit = props.unit && props.unit !== "N/A" ? props.unit : "";
+    var mini = Boolean(props.mini);
+    var isOrange = Boolean(props.isOrange);
+    var alertLevel = props.alertLevel || "normal";
+
+    var width = mini ? 180 : 580;
+    var height = mini ? 46 : 210;
+    var padLeft = mini ? 4 : 44;
+    var padRight = mini ? 4 : 20;
+    var padTop = mini ? 5 : 22;
+    var padBottom = mini ? 5 : 34;
+
+    var combined = seriesSecondary ? series.concat(seriesSecondary) : series;
+    var minVal = Math.min.apply(null, combined);
+    var maxVal = Math.max.apply(null, combined);
+    if (unit === "bpm") {
+      minVal = Math.min(55, minVal - 4);
+      maxVal = Math.max(130, maxVal + 8);
+    } else if (unit === "mV") {
+      minVal = Math.min(-0.42, minVal - 0.05);
+      maxVal = Math.max(1.32, maxVal + 0.05);
+    } else if (unit === "mmHg" && seriesSecondary) {
+      minVal = Math.min(55, minVal - 6);
+      maxVal = Math.max(145, maxVal + 8);
+    } else if (unit === "% (SpO2)") {
+      minVal = Math.min(95.0, minVal - 0.5);
+      maxVal = Math.max(100.0, maxVal + 0.2);
+    } else if (maxVal - minVal < 1.2) {
+      var mid = (maxVal + minVal) / 2;
+      minVal = mid - 0.8;
+      maxVal = mid + 0.8;
+    } else {
+      var padSpan = (maxVal - minVal) * 0.15;
+      minVal -= padSpan;
+      maxVal += padSpan;
+    }
+    var range = Math.max(0.001, maxVal - minVal);
+    var plotW = width - padLeft - padRight;
+    var plotH = height - padTop - padBottom;
+
+    var points = series.map(function (val, idx) {
+      var x = padLeft + (series.length > 1 ? (idx / (series.length - 1)) * plotW : plotW / 2);
+      var y = padTop + plotH - ((val - minVal) / range) * plotH;
+      return { x: Number(x.toFixed(1)), y: Number(y.toFixed(1)), val: val, label: labels[idx] || "#" + (idx + 1) };
+    });
+
+    var polylineStr = points
+      .map(function (p) {
+        return p.x + "," + p.y;
+      })
+      .join(" ");
+
+    var areaStr =
+      points[0].x +
+      "," +
+      (padTop + plotH) +
+      " " +
+      polylineStr +
+      " " +
+      points[points.length - 1].x +
+      "," +
+      (padTop + plotH);
+
+    var secondaryPolylineStr = null;
+    if (seriesSecondary && seriesSecondary.length > 0) {
+      secondaryPolylineStr = seriesSecondary
+        .map(function (val, idx) {
+          var x = padLeft + (seriesSecondary.length > 1 ? (idx / (seriesSecondary.length - 1)) * plotW : plotW / 2);
+          var y = padTop + plotH - ((val - minVal) / range) * plotH;
+          return Number(x.toFixed(1)) + "," + Number(y.toFixed(1));
+        })
+        .join(" ");
+    }
+
+    var strokeColor =
+      alertLevel === "red"
+        ? "#fecaca"
+        : alertLevel === "yellow"
+        ? "#ffffff"
+        : isOrange
+        ? "#fde68a"
+        : "#38bdf8";
+    var fillColor =
+      alertLevel === "red"
+        ? "rgba(254, 202, 202, 0.22)"
+        : alertLevel === "yellow"
+        ? "rgba(255, 255, 255, 0.22)"
+        : isOrange
+        ? "rgba(253, 230, 138, 0.18)"
+        : "rgba(56, 189, 248, 0.18)";
+
+    return h(
+      "svg",
+      {
+        className: mini ? "meas-mini-chart-svg" : "meas-full-chart-svg",
+        viewBox: "0 0 " + width + " " + height,
+        role: "img",
+        "aria-label": "Line graph visualization",
+      },
+      !mini
+        ? [0, 0.5, 1].map(function (ratio, idx) {
+            var yPos = Number((padTop + plotH * (1 - ratio)).toFixed(1));
+            var tickVal = (minVal + range * ratio).toFixed(range < 8 ? 2 : 0);
+            return h(
+              "g",
+              { key: "grid-" + idx },
+              h("line", {
+                x1: padLeft,
+                y1: yPos,
+                x2: width - padRight,
+                y2: yPos,
+                stroke: "rgba(255,255,255,0.18)",
+                strokeDasharray: "3,3",
+              }),
+              h(
+                "text",
+                {
+                  x: padLeft - 6,
+                  y: yPos + 4,
+                  textAnchor: "end",
+                  fill: "#dbeafe",
+                  fontSize: "10",
+                },
+                tickVal
+              )
+            );
+          })
+        : null,
+      h("polygon", { points: areaStr, fill: fillColor }),
+      secondaryPolylineStr
+        ? h("polyline", {
+            fill: "none",
+            stroke: "rgba(255, 255, 255, 0.72)",
+            strokeWidth: mini ? "1.6" : "2.1",
+            strokeDasharray: "4,3",
+            strokeLinecap: "round",
+            strokeLinejoin: "round",
+            points: secondaryPolylineStr,
+          })
+        : null,
+      h("polyline", {
+        fill: "none",
+        stroke: strokeColor,
+        strokeWidth: mini ? "2" : "2.6",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
+        points: polylineStr,
+      }),
+      !mini
+        ? points.map(function (pt, idx) {
+            var showLabel = series.length <= 10 || idx % 2 === 0 || idx === series.length - 1;
+            return h(
+              "g",
+              { key: "pt-" + idx },
+              h("circle", {
+                cx: pt.x,
+                cy: pt.y,
+                r: "3.2",
+                fill: "#ffffff",
+                stroke: strokeColor,
+                strokeWidth: "1.8",
+              }),
+              showLabel
+                ? h(
+                    "text",
+                    {
+                      x: pt.x,
+                      y: height - 10,
+                      textAnchor: "middle",
+                      fill: "#dbeafe",
+                      fontSize: "10",
+                    },
+                    pt.label
+                  )
+                : null
+            );
+          })
+        : null,
+      !mini && unit
+        ? h(
+            "text",
+            {
+              x: width - padRight,
+              y: 14,
+              textAnchor: "end",
+              fill: "#93c5fd",
+              fontSize: "11",
+              fontWeight: "600",
+            },
+            seriesSecondary ? "Solid: Systolic | Dashed: Diastolic (" + unit + ")" : "Unit: " + unit
+          )
+        : null
+    );
+  }
+
+  function MeasurementColumnChartSvg(props) {
+    var series = Array.isArray(props.series) && props.series.length > 0 ? props.series : [1, 2, 3];
+    var labels = Array.isArray(props.labels) ? props.labels : [];
+    var mini = Boolean(props.mini);
+    var isOrange = Boolean(props.isOrange);
+    var alertLevel = props.alertLevel || "normal";
+
+    var width = mini ? 180 : 580;
+    var height = mini ? 46 : 210;
+    var padLeft = mini ? 4 : 40;
+    var padRight = mini ? 4 : 18;
+    var padTop = mini ? 6 : 26;
+    var padBottom = mini ? 4 : 34;
+
+    var maxVal = Math.max.apply(null, series.concat([0.001])) * 1.12;
+    var plotW = width - padLeft - padRight;
+    var plotH = height - padTop - padBottom;
+    var slotW = plotW / series.length;
+    var barW = Math.max(mini ? 8 : 22, Math.min(mini ? 18 : 48, slotW * 0.64));
+    var barFill =
+      alertLevel === "red"
+        ? "#fecaca"
+        : alertLevel === "yellow"
+        ? "#ffffff"
+        : isOrange
+        ? "#fde68a"
+        : "#38bdf8";
+
+    return h(
+      "svg",
+      {
+        className: mini ? "meas-mini-chart-svg" : "meas-full-chart-svg",
+        viewBox: "0 0 " + width + " " + height,
+        role: "img",
+        "aria-label": "Column graph visualization",
+      },
+      !mini
+        ? [0, 0.5, 1].map(function (ratio, idx) {
+            var yPos = Number((padTop + plotH * (1 - ratio)).toFixed(1));
+            var tickVal = (maxVal * ratio).toFixed(maxVal < 0.2 ? 3 : maxVal < 5 ? 2 : 0);
+            return h(
+              "g",
+              { key: "cgrid-" + idx },
+              h("line", {
+                x1: padLeft,
+                y1: yPos,
+                x2: width - padRight,
+                y2: yPos,
+                stroke: "rgba(255,255,255,0.18)",
+                strokeDasharray: "3,3",
+              }),
+              h(
+                "text",
+                {
+                  x: padLeft - 6,
+                  y: yPos + 4,
+                  textAnchor: "end",
+                  fill: "#dbeafe",
+                  fontSize: "10",
+                },
+                tickVal
+              )
+            );
+          })
+        : null,
+      series.map(function (val, idx) {
+        var barH = Math.max(3, (Math.max(0, val) / maxVal) * plotH);
+        var x = padLeft + idx * slotW + (slotW - barW) / 2;
+        var y = padTop + plotH - barH;
+        return h(
+          "g",
+          { key: "bar-" + idx },
+          h("rect", {
+            x: Number(x.toFixed(1)),
+            y: Number(y.toFixed(1)),
+            width: Number(barW.toFixed(1)),
+            height: Number(barH.toFixed(1)),
+            rx: mini ? "1.5" : "3",
+            fill: barFill,
+          }),
+          !mini
+            ? h(
+                "text",
+                {
+                  x: Number((x + barW / 2).toFixed(1)),
+                  y: Number((y - 6).toFixed(1)),
+                  textAnchor: "middle",
+                  fill: "#ffffff",
+                  fontSize: "11",
+                  fontWeight: "600",
+                },
+                String(val)
+              )
+            : null,
+          !mini
+            ? h(
+                "text",
+                {
+                  x: Number((x + barW / 2).toFixed(1)),
+                  y: height - 10,
+                  textAnchor: "middle",
+                  fill: "#dbeafe",
+                  fontSize: "10",
+                },
+                labels[idx] || "#" + (idx + 1)
+              )
+            : null
+        );
+      })
+    );
+  }
+
   function DashboardScreen(props) {
     var astronaut = props.astronaut;
     var slotIndex = props.slotIndex;
@@ -3516,6 +5392,1533 @@
       [browserOnline, offlineMode]
     );
 
+
+    var astroKey = (astronaut && (astronaut.astronaut_id || astronaut.id)) || "crew_" + ((slotIndex || 0) + 1);
+
+    var _measurements = useState(function () {
+      return loadStoredMeasurements(astroKey, astronaut, slotIndex);
+    });
+    var measurements = _measurements[0];
+    var setMeasurements = _measurements[1];
+
+    var _measEditMode = useState(false);
+    var measEditMode = _measEditMode[0];
+    var setMeasEditMode = _measEditMode[1];
+
+    var _measCategory = useState("all");
+    var measCategory = _measCategory[0];
+    var setMeasCategory = _measCategory[1];
+
+    var _measSearch = useState("");
+    var measSearch = _measSearch[0];
+    var setMeasSearch = _measSearch[1];
+
+    var _selectedMeasId = useState(null);
+    var selectedMeasId = _selectedMeasId[0];
+    var setSelectedMeasId = _selectedMeasId[1];
+
+    var _measModalMode = useState(null);
+    var measModalMode = _measModalMode[0];
+    var setMeasModalMode = _measModalMode[1];
+
+    var _draftMeas = useState(null);
+    var draftMeas = _draftMeas[0];
+    var setDraftMeas = _draftMeas[1];
+
+    var _dismissedWarnings = useState({});
+    var dismissedWarnings = _dismissedWarnings[0];
+    var setDismissedWarnings = _dismissedWarnings[1];
+
+    var _testModalOpen = useState(false);
+    var testModalOpen = _testModalOpen[0];
+    var setTestModalOpen = _testModalOpen[1];
+
+    var _testTargetId = useState("heart_rate");
+    var testTargetId = _testTargetId[0];
+    var setTestTargetId = _testTargetId[1];
+
+    var _warningLogs = useState(function () {
+      return loadStoredWarningLogs(astroKey, astronaut);
+    });
+    var warningLogs = _warningLogs[0];
+    var setWarningLogs = _warningLogs[1];
+
+    var _wlogEditMode = useState(false);
+    var wlogEditMode = _wlogEditMode[0];
+    var setWlogEditMode = _wlogEditMode[1];
+
+    var _wlogFilter = useState("all");
+    var wlogFilter = _wlogFilter[0];
+    var setWlogFilter = _wlogFilter[1];
+
+    var _wlogSearch = useState("");
+    var wlogSearch = _wlogSearch[0];
+    var setWlogSearch = _wlogSearch[1];
+
+    var _editingLog = useState(null);
+    var editingLog = _editingLog[0];
+    var setEditingLog = _editingLog[1];
+
+    var _selectedWlogId = useState(null);
+    var selectedWlogId = _selectedWlogId[0];
+    var setSelectedWlogId = _selectedWlogId[1];
+
+    var _confirmDeleteWlogId = useState(null);
+    var confirmDeleteWlogId = _confirmDeleteWlogId[0];
+    var setConfirmDeleteWlogId = _confirmDeleteWlogId[1];
+    var confirmDeleteTimerRef = useRef(null);
+
+    var envModeRef = useRef(envMode);
+    envModeRef.current = envMode;
+
+    var simLocksRef = useRef({});
+    var acknowledgedRedsRef = useRef({});
+    var initialRedSosSpecRef = useRef(null);
+    var latchedWarningsRef = useRef({});
+    var lastLoggedLevelRef = useRef({});
+    var recentHistoryBufferRef = useRef({
+      oxygen_left: [88.08, 88.07, 88.06, 88.05, 88.04, 88.03, 88.02, 88.01, 88.0],
+      battery_level: [92.48, 92.47, 92.46, 92.45, 92.44, 92.43, 92.42, 92.41, 92.4],
+      metabolic_rate: [90.2, 91.0, 91.5, 92.0, 92.2, 92.4, 92.5],
+      pressure_inside_veins: [5.1, 5.2, 5.2, 5.1, 5.2, 5.3, 5.2, 5.2],
+    });
+
+    function handleSelectEnvMode(newMode) {
+      envModeRef.current = newMode;
+      setEnvMode(newMode);
+      var isSpace = newMode === "outer-space";
+      var locks = simLocksRef.current || {};
+      setMeasurements(function (prev) {
+        if (!prev) return prev;
+        var next = Object.assign({}, prev);
+        if (next.outside_temperature && !locks.outside_temperature) {
+          next.outside_temperature = Object.assign({}, next.outside_temperature, {
+            value: isSpace ? "-270.4" : "21.4",
+            series: isSpace
+              ? [-270.3, -270.4, -270.4, -270.5, -270.4, -270.3, -270.4, -270.5, -270.4, -270.4, -270.3, -270.4]
+              : [21.3, 21.4, 21.4, 21.3, 21.4, 21.5, 21.4, 21.4, 21.3, 21.4, 21.4, 21.4],
+          });
+        }
+        if (next.temp_outside_costume && !locks.temp_outside_costume) {
+          next.temp_outside_costume = Object.assign({}, next.temp_outside_costume, {
+            value: isSpace ? "-270.1" : "21.4",
+            series: isSpace
+              ? [-270.0, -270.1, -270.2, -270.1, -270.0, -270.1, -270.2, -270.1, -270.1, -270.2, -270.1, -270.0, -270.1, -270.1, -270.2, -270.1]
+              : [21.3, 21.4, 21.4, 21.3, 21.4, 21.5, 21.4, 21.4, 21.3, 21.4, 21.5, 21.4, 21.4, 21.3, 21.4, 21.4],
+          });
+        }
+        if (next.temp_inside_costume && !locks.temp_inside_costume) {
+          next.temp_inside_costume = Object.assign({}, next.temp_inside_costume, {
+            value: isSpace ? "19.8" : "21.6",
+            series: isSpace
+              ? [19.9, 19.8, 19.8, 19.7, 19.8, 19.9, 19.8, 19.8, 19.7, 19.8, 19.9, 19.8, 19.8, 19.7, 19.8, 19.8]
+              : [21.5, 21.6, 21.6, 21.5, 21.6, 21.7, 21.6, 21.6, 21.5, 21.6, 21.7, 21.6, 21.6, 21.5, 21.6, 21.6],
+          });
+        }
+        if (next.radiation_exposure && !locks.radiation_exposure) {
+          next.radiation_exposure = Object.assign({}, next.radiation_exposure, {
+            value: isSpace ? "0.048" : "0.038",
+            series: isSpace
+              ? [0.046, 0.047, 0.047, 0.048, 0.049, 0.048, 0.048]
+              : [0.036, 0.037, 0.038, 0.039, 0.038, 0.039, 0.038],
+          });
+        }
+        if (next.humidity && !locks.humidity) {
+          next.humidity = Object.assign({}, next.humidity, {
+            value: isSpace ? "37.5" : "44.0",
+            series: isSpace
+              ? [37.7, 37.6, 37.5, 37.4, 37.5, 37.6, 37.5, 37.4, 37.5, 37.6, 37.5, 37.5]
+              : [43.8, 44.0, 44.1, 43.9, 44.0, 44.2, 44.1, 44.0, 43.9, 44.1, 44.0, 44.0],
+          });
+        }
+        if (next.heart_rate && !locks.heart_rate) {
+          next.heart_rate = Object.assign({}, next.heart_rate, {
+            value: isSpace ? "92" : "78",
+            series: isSpace
+              ? [88, 89, 90, 91, 90, 92, 91, 93, 92, 91, 92, 93, 92, 91, 92, 93, 92, 91, 92, 92]
+              : [76, 77, 78, 79, 78, 77, 78, 79, 78, 77, 78, 79, 78, 77, 78, 79, 78, 77, 78, 78],
+          });
+        }
+        if (next.respiration_rate && !locks.respiration_rate) {
+          next.respiration_rate = Object.assign({}, next.respiration_rate, {
+            value: isSpace ? "17" : "14",
+            series: isSpace
+              ? [16, 16, 17, 17, 16, 17, 18, 17, 17, 16, 17, 17]
+              : [14, 14, 15, 14, 13, 14, 15, 14, 14, 13, 14, 14],
+          });
+        }
+        if (next.metabolic_rate && !locks.metabolic_rate) {
+          next.metabolic_rate = Object.assign({}, next.metabolic_rate, {
+            value: isSpace ? "146.0 kcal/h (170 W)" : "92.5 kcal/h (108 W)",
+          });
+        }
+        if (next.pressure && !locks.pressure) {
+          next.pressure = Object.assign({}, next.pressure, {
+            value: isSpace ? "124/80" : "118/76",
+            series: isSpace
+              ? [122, 123, 123, 124, 124, 125, 124, 123, 124, 124, 125, 124, 124, 123, 124, 124]
+              : [117, 118, 118, 119, 118, 117, 118, 119, 118, 118, 117, 118, 119, 118, 118, 118],
+            seriesSecondary: isSpace
+              ? [79, 79, 80, 80, 80, 81, 80, 79, 80, 80, 81, 80, 80, 79, 80, 80]
+              : [75, 76, 76, 77, 76, 75, 76, 77, 76, 76, 75, 76, 77, 76, 76, 76],
+          });
+        }
+        if (next.co2_level && !locks.co2_level) {
+          next.co2_level = Object.assign({}, next.co2_level, {
+            value: isSpace ? "2.95 mmHg (3882 ppm)" : "2.60 mmHg (3421 ppm)",
+            series: isSpace
+              ? [2.90, 2.92, 2.94, 2.95, 2.94, 2.96, 2.95, 2.94, 2.95, 2.96, 2.95, 2.94, 2.95, 2.95, 2.96, 2.95]
+              : [2.58, 2.60, 2.61, 2.59, 2.60, 2.62, 2.61, 2.60, 2.59, 2.61, 2.60, 2.59, 2.60, 2.61, 2.60, 2.60],
+          });
+        }
+        if (next.skin_surface && !locks.skin_surface) {
+          next.skin_surface = Object.assign({}, next.skin_surface, {
+            value: isSpace ? "36.6" : "36.4",
+            series: isSpace
+              ? [36.5, 36.5, 36.6, 36.6, 36.5, 36.6, 36.7, 36.6, 36.6, 36.5, 36.6, 36.6]
+              : [36.3, 36.4, 36.4, 36.3, 36.4, 36.5, 36.4, 36.4, 36.3, 36.4, 36.4, 36.4],
+          });
+        }
+        return next;
+      });
+    }
+
+    var hrSimRef = useRef({
+      tickCount: 0,
+      mode: "normal",
+      activeTicksLeft: 0,
+      rampTicksLeft: 0,
+      targetActiveHr: 120,
+      ecgPhase: 0,
+      radAnomalyTicks: 0,
+      orbitalWarmPassTicks: 0,
+    });
+
+    useEffect(
+      function () {
+        simLocksRef.current = {};
+        acknowledgedRedsRef.current = {};
+        initialRedSosSpecRef.current = null;
+        latchedWarningsRef.current = {};
+        lastLoggedLevelRef.current = {};
+        setDismissedWarnings({});
+        setMeasurements(loadStoredMeasurements(astroKey, astronaut, slotIndex));
+        setWarningLogs(loadStoredWarningLogs(astroKey, astronaut));
+      },
+      [astroKey, astronaut, slotIndex]
+    );
+
+    useEffect(
+      function () {
+        // Compact 5-point continuous P-Q-R-S-T complex with zero flatline pause between spikes
+        var ecgWaveformTemplate = [0.16, -0.15, 1.18, -0.29, 0.25];
+
+        function stepBounded(curr, minNormal, baseTarget, maxNormal, maxActive, stepMin, stepMax, isActive, isCooldown) {
+          var step = stepMin + Math.random() * (stepMax - stepMin);
+          if (isActive) {
+            if (curr >= maxActive) return curr - step;
+            var activeMid = maxNormal + (maxActive - maxNormal) * 0.55;
+            var upProb = curr < activeMid - stepMax ? 0.72 : curr > activeMid + stepMax ? 0.35 : 0.52;
+            var d = Math.random() < upProb ? step : -step;
+            return Math.min(maxActive, Math.max(minNormal, curr + d));
+          }
+          if (isCooldown && curr > maxNormal * 0.92) {
+            return Math.max(minNormal, curr - step * 0.85);
+          }
+          if (curr >= maxNormal) {
+            return curr - step;
+          }
+          if (curr <= minNormal) {
+            return curr + step;
+          }
+          var pullUp = curr < baseTarget - stepMax ? 0.62 : curr > baseTarget + stepMax ? 0.38 : 0.5;
+          var delta = Math.random() < pullUp ? step : -step;
+          var next = curr + delta;
+          if (next > maxNormal) next = maxNormal;
+          if (next < minNormal) next = minNormal;
+          return next;
+        }
+
+        function stepTowardTarget(curr, target, stepSize) {
+          if (Math.abs(target - curr) <= stepSize) {
+            return target;
+          }
+          return curr < target ? curr + stepSize : curr - stepSize;
+        }
+
+        var simInterval = window.setInterval(function () {
+          setMeasurements(function (prev) {
+            if (!prev || !prev.heart_rate) return prev;
+            var sim = hrSimRef.current;
+            var locks = simLocksRef.current || {};
+            var histBuf = recentHistoryBufferRef.current;
+            sim.tickCount += 1;
+            var tick = sim.tickCount;
+            var nextMap = Object.assign({}, prev);
+
+            var parsedHr = parseFloat(prev.heart_rate.value);
+            var currentHr = Number.isFinite(parsedHr) && parsedHr >= 0 ? Math.round(parsedHr) : 78;
+            var currRadVal = prev.radiation_exposure ? parseFloat(prev.radiation_exposure.value) : 0.039;
+            if (!Number.isFinite(currRadVal)) currRadVal = 0.039;
+            var currO2LeftVal = prev.oxygen_left ? parseFloat(prev.oxygen_left.value) : 88.0;
+            if (!Number.isFinite(currO2LeftVal)) currO2LeftVal = 88.0;
+            var currCo2Val = prev.co2_level ? parseFloat(prev.co2_level.value) : 2.6;
+            if (!Number.isFinite(currCo2Val)) currCo2Val = 2.6;
+            var currBatVal = prev.battery_level ? parseFloat(prev.battery_level.value) : 92.4;
+            if (!Number.isFinite(currBatVal)) currBatVal = 92.4;
+            var currSuitInVal = prev.temp_inside_costume ? parseFloat(prev.temp_inside_costume.value) : 21.6;
+            if (!Number.isFinite(currSuitInVal)) currSuitInVal = 21.6;
+            var currSuitOutVal = prev.temp_outside_costume ? parseFloat(prev.temp_outside_costume.value) : -18.5;
+            if (!Number.isFinite(currSuitOutVal)) currSuitOutVal = -18.5;
+            var currCabTempVal = prev.outside_temperature ? parseFloat(prev.outside_temperature.value) : 21.4;
+            if (!Number.isFinite(currCabTempVal)) currCabTempVal = 21.4;
+
+            // Detect real-world primary anomalies (only active when a test or manual edit has pushed a driver into Yellow/Red)
+            var isCardiacArrest = locks.heart_rate && currentHr <= 5;
+            var isSevereBradycardia = locks.heart_rate && currentHr > 5 && currentHr < 48;
+            var isModerateBradycardia = locks.heart_rate && currentHr >= 48 && currentHr < 56;
+            var isRedTachycardia = locks.heart_rate && currentHr > 148;
+            var isYellowTachycardia = locks.heart_rate && currentHr >= 125 && currentHr <= 148;
+
+            var isRedRadiation = locks.radiation_exposure && currRadVal > 0.085;
+            var isYellowRadiation = locks.radiation_exposure && currRadVal > 0.055 && currRadVal <= 0.085;
+
+            var isRedHypoxiaDriver =
+              (locks.oxygen_left && currO2LeftVal < 25) || (locks.co2_level && currCo2Val > 4.25);
+            var isYellowHypoxiaDriver =
+              !isRedHypoxiaDriver &&
+              ((locks.oxygen_left && currO2LeftVal < 40) || (locks.co2_level && currCo2Val > 3.5));
+
+            var isRedThermalDriver =
+              (locks.temp_inside_costume && currSuitInVal > 24.5) ||
+              (locks.temp_outside_costume && currSuitOutVal > 40.0) ||
+              (locks.outside_temperature && currCabTempVal > 25.0);
+            var isYellowThermalDriver =
+              !isRedThermalDriver &&
+              ((locks.temp_inside_costume && currSuitInVal > 23.3) ||
+                (locks.temp_outside_costume && currSuitOutVal > 14.0) ||
+                (locks.outside_temperature && currCabTempVal > 23.2));
+
+            var isRedBatteryLow = locks.battery_level && currBatVal < 20;
+            var isYellowBatteryLow = locks.battery_level && currBatVal >= 20 && currBatVal < 35;
+
+            var isActive = sim.mode === "active";
+            var isCooldown = sim.mode === "cooldown";
+
+            // 1. Every 0.1s (100ms): Electrocardiogram (mV, continuous spikes with no pauses — or flatline if heartbeats stop!) & Oxygen level in blood (% SpO2)
+            if (prev.electrocardiogram && !locks.electrocardiogram) {
+              var ecgItem = prev.electrocardiogram;
+              sim.ecgPhase = (sim.ecgPhase + 1) % ecgWaveformTemplate.length;
+              var waveIdx = sim.ecgPhase;
+              var sampleMv = 0;
+              var peakInWindow = 1.18;
+              var prevEcgSeries = Array.isArray(ecgItem.series) ? ecgItem.series : [0.16, -0.15, 1.18, -0.29, 0.25];
+
+              if (currentHr <= 5) {
+                // Interconnected: Heartbeats stopped (0-5 bpm) -> ECG flatlines (asystole micro-noise 0.00-0.02 mV -> triggers Red ECG SOS)
+                sampleMv = Number(((Math.random() - 0.5) * 0.02).toFixed(2));
+                var flatSeries = prevEcgSeries.concat([sampleMv]).slice(-25);
+                var flatLabels = flatSeries.map(function (_, i) {
+                  var sAgo = ((flatSeries.length - 1 - i) * 0.1).toFixed(1);
+                  return i === flatSeries.length - 1 ? "Now" : "-" + sAgo + "s";
+                });
+                var flatPeak = Math.max(0.01, Math.min(0.04, Math.max.apply(null, flatSeries.slice(-5))));
+                nextMap.electrocardiogram = Object.assign({}, ecgItem, {
+                  value: flatPeak.toFixed(2),
+                  series: flatSeries,
+                  seriesLabels: flatLabels,
+                });
+              } else if (currentHr < 48) {
+                // Interconnected: Severe bradycardia (<48 bpm) -> depressed low-voltage QRS (<0.50 mV Red ECG)
+                var bradyScale = 0.36;
+                var bradyBase = ecgWaveformTemplate[waveIdx] * bradyScale;
+                var bradyJitter = (Math.random() - 0.5) * 0.015;
+                sampleMv = Number((bradyBase + bradyJitter).toFixed(2));
+                var bradySeries = prevEcgSeries.concat([sampleMv]).slice(-25);
+                var bradyLabels = bradySeries.map(function (_, i) {
+                  var sAgo = ((bradySeries.length - 1 - i) * 0.1).toFixed(1);
+                  return i === bradySeries.length - 1 ? "Now" : "-" + sAgo + "s";
+                });
+                peakInWindow = Math.max(0.38, Math.min(0.46, Math.max.apply(null, bradySeries.slice(-5))));
+                nextMap.electrocardiogram = Object.assign({}, ecgItem, {
+                  value: peakInWindow.toFixed(2),
+                  series: bradySeries,
+                  seriesLabels: bradyLabels,
+                });
+              } else if (currentHr < 56) {
+                // Interconnected: Moderate bradycardia (48-55 bpm) -> concerning reduced R-wave amplitude (0.62 mV Yellow ECG)
+                var modBradyBase = ecgWaveformTemplate[waveIdx] * 0.53;
+                sampleMv = Number((modBradyBase + (Math.random() - 0.5) * 0.015).toFixed(2));
+                var modBradySeries = prevEcgSeries.concat([sampleMv]).slice(-25);
+                var modBradyLabels = modBradySeries.map(function (_, i) {
+                  var sAgo = ((modBradySeries.length - 1 - i) * 0.1).toFixed(1);
+                  return i === modBradySeries.length - 1 ? "Now" : "-" + sAgo + "s";
+                });
+                peakInWindow = Math.max(0.58, Math.min(0.68, Math.max.apply(null, modBradySeries.slice(-5))));
+                nextMap.electrocardiogram = Object.assign({}, ecgItem, {
+                  value: peakInWindow.toFixed(2),
+                  series: modBradySeries,
+                  seriesLabels: modBradyLabels,
+                });
+              } else if (currentHr > 148) {
+                // Interconnected: Extreme tachycardia (>148 bpm) -> high-amplitude hyperdynamic R-wave (>1.65 mV Red ECG)
+                var redTachyBase = waveIdx === 2 ? 1.72 : ecgWaveformTemplate[waveIdx] * 1.28;
+                sampleMv = Number((redTachyBase + (Math.random() - 0.5) * 0.03).toFixed(2));
+                var redTachySeries = prevEcgSeries.concat([sampleMv]).slice(-25);
+                var redTachyLabels = redTachySeries.map(function (_, i) {
+                  var sAgo = ((redTachySeries.length - 1 - i) * 0.1).toFixed(1);
+                  return i === redTachySeries.length - 1 ? "Now" : "-" + sAgo + "s";
+                });
+                peakInWindow = Math.max(1.68, Math.min(1.78, Math.max.apply(null, redTachySeries.slice(-5))));
+                nextMap.electrocardiogram = Object.assign({}, ecgItem, {
+                  value: peakInWindow.toFixed(2),
+                  series: redTachySeries,
+                  seriesLabels: redTachyLabels,
+                });
+              } else if (currentHr >= 125) {
+                // Interconnected: Tachycardia (125-148 bpm) -> elevated R-wave (1.46-1.54 mV Yellow ECG)
+                var yelTachyBase = waveIdx === 2 ? 1.49 : ecgWaveformTemplate[waveIdx] * 1.15;
+                sampleMv = Number((yelTachyBase + (Math.random() - 0.5) * 0.025).toFixed(2));
+                var yelTachySeries = prevEcgSeries.concat([sampleMv]).slice(-25);
+                var yelTachyLabels = yelTachySeries.map(function (_, i) {
+                  var sAgo = ((yelTachySeries.length - 1 - i) * 0.1).toFixed(1);
+                  return i === yelTachySeries.length - 1 ? "Now" : "-" + sAgo + "s";
+                });
+                peakInWindow = Math.max(1.45, Math.min(1.56, Math.max.apply(null, yelTachySeries.slice(-5))));
+                nextMap.electrocardiogram = Object.assign({}, ecgItem, {
+                  value: peakInWindow.toFixed(2),
+                  series: yelTachySeries,
+                  seriesLabels: yelTachyLabels,
+                });
+              } else {
+                // Normal / Active simulation: strictly bounded inside nominal Blue [1.12..1.28 mV]
+                var baseSample = ecgWaveformTemplate[waveIdx];
+                var clampedHrForEcg = Math.min(118, Math.max(66, currentHr));
+                var hrScale = waveIdx === 2 ? Math.max(0, (clampedHrForEcg - 78) * 0.0018) : 0;
+                var jitter = (Math.random() - 0.5) * (waveIdx === 2 ? 0.024 : 0.012);
+                sampleMv = Number((baseSample + hrScale + jitter).toFixed(2));
+                var nextEcgSeries = prevEcgSeries.concat([sampleMv]).slice(-25);
+                var nextEcgLabels = nextEcgSeries.map(function (_, i) {
+                  var sAgo = ((nextEcgSeries.length - 1 - i) * 0.1).toFixed(1);
+                  return i === nextEcgSeries.length - 1 ? "Now" : "-" + sAgo + "s";
+                });
+                peakInWindow = Math.min(1.32, Math.max(1.10, Math.max.apply(null, nextEcgSeries.slice(-5))));
+                nextMap.electrocardiogram = Object.assign({}, ecgItem, {
+                  value: peakInWindow.toFixed(2),
+                  series: nextEcgSeries,
+                  seriesLabels: nextEcgLabels,
+                });
+              }
+            }
+
+            if (prev.oxygen_level_in_blood && !locks.oxygen_level_in_blood && Math.random() < 0.35) {
+              var spo2Item = prev.oxygen_level_in_blood;
+              var currSpo2 = parseFloat(spo2Item.value);
+              if (!Number.isFinite(currSpo2)) currSpo2 = 98.6;
+              var nextSpo2 = currSpo2;
+
+              if (isCardiacArrest || isRedHypoxiaDriver) {
+                // Interconnected: Cardiac arrest or critical O2/CO2 failure -> severe blood oxygen desaturation (~89.2% Red)
+                nextSpo2 = stepTowardTarget(currSpo2, 89.2 + (Math.random() - 0.5) * 0.4, 0.35);
+                nextSpo2 = Math.max(88.0, Math.min(99.6, Number(nextSpo2.toFixed(1))));
+              } else if (isSevereBradycardia || isYellowHypoxiaDriver) {
+                // Interconnected: Severe bradycardia or low O2/high CO2 -> concerning blood oxygen dip (~94.4% Yellow)
+                nextSpo2 = stepTowardTarget(currSpo2, 94.4 + (Math.random() - 0.5) * 0.4, 0.25);
+                nextSpo2 = Math.max(93.2, Math.min(99.6, Number(nextSpo2.toFixed(1))));
+              } else if (currSpo2 < 97.2) {
+                // Smooth recovery back to nominal Blue when primary anomaly clears
+                nextSpo2 = Number(Math.min(98.6, currSpo2 + 0.3).toFixed(1));
+              } else {
+                // Strictly nominal Blue fluctuation (97.4% - 99.6%, never triggers Yellow <95.8% or recentDelta >=3.0%)
+                var spo2Target = isActive ? 98.0 : 98.6;
+                var spo2Min = isActive ? 97.4 : 97.8;
+                var spo2Max = 99.5;
+                var spo2Step = 0.1;
+                if (currSpo2 >= spo2Max) {
+                  nextSpo2 = currSpo2 - spo2Step;
+                } else if (currSpo2 <= spo2Min) {
+                  nextSpo2 = currSpo2 + spo2Step;
+                } else {
+                  var pUp = currSpo2 < spo2Target - 0.2 ? 0.65 : currSpo2 > spo2Target + 0.2 ? 0.35 : 0.5;
+                  nextSpo2 = currSpo2 + (Math.random() < pUp ? spo2Step : -spo2Step);
+                }
+                nextSpo2 = Math.min(99.6, Math.max(97.4, Number(nextSpo2.toFixed(1))));
+              }
+
+              var prevSpo2Series = Array.isArray(spo2Item.series) ? spo2Item.series : [98.6];
+              var nextSpo2Series = prevSpo2Series.concat([nextSpo2]).slice(-20);
+              var nextSpo2Labels = nextSpo2Series.map(function (_, idx) {
+                var ago = ((nextSpo2Series.length - 1 - idx) * 0.1).toFixed(1);
+                return idx === nextSpo2Series.length - 1 ? "Now" : "-" + ago + "s";
+              });
+              nextMap.oxygen_level_in_blood = Object.assign({}, spo2Item, {
+                value: nextSpo2.toFixed(1),
+                series: nextSpo2Series,
+                seriesLabels: nextSpo2Labels,
+              });
+            }
+
+            // 2. Every 0.5s (tick % 5 === 0): CO_2 level (ppm or mmHg, Line graph — coupled to battery/scrubber power, otherwise strictly nominal Blue)
+            if (tick % 5 === 0 && prev.co2_level && !locks.co2_level) {
+              var co2Item = prev.co2_level;
+              var currCo2 = parseFloat(co2Item.value);
+              if (!Number.isFinite(currCo2)) currCo2 = 2.6;
+              var nextCo2 = currCo2;
+              if (isRedBatteryLow) {
+                // Interconnected: Critical battery loss (<20%) -> scrubber fan failure -> dangerous CO2 buildup (~4.45 mmHg Red)
+                nextCo2 = stepTowardTarget(currCo2, 4.45 + (Math.random() - 0.5) * 0.08, 0.12);
+              } else if (isYellowBatteryLow) {
+                // Interconnected: Low battery (<35%) -> reduced scrubber airflow -> concerning CO2 rise (~3.76 mmHg Yellow)
+                nextCo2 = stepTowardTarget(currCo2, 3.76 + (Math.random() - 0.5) * 0.06, 0.09);
+              } else if (currCo2 > 3.25) {
+                nextCo2 = Math.max(2.6, currCo2 - 0.12);
+              } else {
+                nextCo2 = stepBounded(currCo2, 2.25, 2.6, 3.0, 3.22, 0.01, 0.02, isActive, isCooldown);
+              }
+              var cleanCo2 = Number(nextCo2.toFixed(2));
+              var ppmVal = Math.round((cleanCo2 / 760) * 1000000);
+              var prevCo2Series = Array.isArray(co2Item.series) ? co2Item.series : [2.6];
+              var nextCo2Series = prevCo2Series.concat([cleanCo2]).slice(-16);
+              var nextCo2Labels = nextCo2Series.map(function (_, idx) {
+                var ago = ((nextCo2Series.length - 1 - idx) * 0.5).toFixed(1);
+                return idx === nextCo2Series.length - 1 ? "Now" : "-" + ago + "s";
+              });
+              nextMap.co2_level = Object.assign({}, co2Item, {
+                value: cleanCo2.toFixed(2) + " mmHg (" + ppmVal + " ppm)",
+                series: nextCo2Series,
+                seriesLabels: nextCo2Labels,
+              });
+            }
+
+            // 3. Every 1.0s (tick % 10 === 0): Heart rate, Unified Pressure, Vein pressure, Suit temps, O2 left, Battery, plus fast interconnected responses
+            if (tick % 10 === 0) {
+              if (!locks.heart_rate) {
+                var hrItem = prev.heart_rate;
+                var stepMag = 1 + Math.floor(Math.random() * 3); // 1, 2, or 3 bpm
+                var delta = 0;
+                var nextHr = currentHr;
+
+                // Interconnected HR response when driven by high radiation, hypoxia/hypercapnia, or thermal stress
+                var coupledHrTarget = null;
+                if (isRedHypoxiaDriver || isRedThermalDriver || isRedRadiation) {
+                  coupledHrTarget = 136 + Math.floor(Math.random() * 5); // 136-140 bpm compensatory tachycardia (Yellow)
+                } else if (isYellowHypoxiaDriver || isYellowThermalDriver || isYellowRadiation) {
+                  coupledHrTarget = 128 + Math.floor(Math.random() * 4); // 128-131 bpm stress response (Yellow)
+                }
+
+                if (coupledHrTarget !== null) {
+                  nextHr = Math.round(stepTowardTarget(currentHr, coupledHrTarget, 3));
+                } else if (currentHr > 118) {
+                  // Recover smoothly from coupled tachycardia back into normal Blue range
+                  nextHr = Math.max(82, currentHr - 3);
+                } else if (currentHr < 66) {
+                  nextHr = Math.min(78, currentHr + 3);
+                } else {
+                  if (sim.mode === "normal") {
+                    if (Math.random() < 0.05) {
+                      sim.mode = "active";
+                      sim.rampTicksLeft = 15 + Math.floor(Math.random() * 6); // 15-20s ramp-up
+                      sim.activeTicksLeft = 42 + Math.floor(Math.random() * 19); // 42-60s (max 1 min)
+                      // Strictly below 125 bpm Yellow threshold during random activity mode (108-116 bpm)
+                      sim.targetActiveHr = 108 + Math.floor(Math.random() * 9);
+                    }
+                  }
+
+                  if (sim.mode === "active") {
+                    sim.activeTicksLeft -= 1;
+                    if (currentHr >= 118) {
+                      delta = -stepMag;
+                    } else if (sim.rampTicksLeft > 0 || currentHr < sim.targetActiveHr - 4) {
+                      if (sim.rampTicksLeft > 0) sim.rampTicksLeft -= 1;
+                      var needed = sim.targetActiveHr - currentHr;
+                      var secsLeft = Math.max(1, sim.rampTicksLeft + 1);
+                      var avgStep = Math.min(3, Math.max(1, Math.round(needed / secsLeft)));
+                      if (Math.random() < 0.15 && currentHr > 82) {
+                        delta = -1;
+                      } else {
+                        delta = Math.min(3, Math.max(1, avgStep + (Math.random() < 0.5 ? 1 : 0)));
+                      }
+                    } else {
+                      var upBias = currentHr < 110 ? 0.62 : currentHr > 115 ? 0.32 : 0.5;
+                      delta = Math.random() < upBias ? stepMag : -stepMag;
+                    }
+                    nextHr = Math.min(118, Math.max(66, currentHr + delta));
+                    if (sim.activeTicksLeft <= 0) {
+                      sim.mode = "cooldown";
+                    }
+                  } else if (sim.mode === "cooldown") {
+                    if (currentHr >= 98) {
+                      delta = -stepMag;
+                    } else {
+                      delta = Math.random() < 0.82 ? -stepMag : 1;
+                    }
+                    nextHr = Math.max(74, currentHr + delta);
+                    if (nextHr <= 84) {
+                      sim.mode = "normal";
+                    }
+                  } else {
+                    if (currentHr >= 98) {
+                      delta = -stepMag;
+                    } else if (currentHr <= 66) {
+                      delta = stepMag;
+                    } else {
+                      var probUp = currentHr > 83 ? 0.38 : currentHr < 74 ? 0.62 : 0.5;
+                      delta = Math.random() < probUp ? stepMag : -stepMag;
+                    }
+                    nextHr = Math.min(98, Math.max(66, currentHr + delta));
+                  }
+                }
+
+                var prevHrSeries = Array.isArray(hrItem.series) ? hrItem.series : [78];
+                var nextHrSeries = prevHrSeries.concat([nextHr]).slice(-20);
+                var nextHrLabels = nextHrSeries.map(function (_, idx) {
+                  var secsAgo = nextHrSeries.length - 1 - idx;
+                  return secsAgo === 0 ? "Now" : "-" + secsAgo + "s";
+                });
+                nextMap.heart_rate = Object.assign({}, hrItem, {
+                  value: String(nextHr),
+                  series: nextHrSeries,
+                  seriesLabels: nextHrLabels,
+                });
+                currentHr = nextHr;
+              }
+
+              isActive = sim.mode === "active";
+              isCooldown = sim.mode === "cooldown";
+
+              // Pressure inside veins (CVP, mmHg, Number: coupled to cardiac arrest / severe bradycardia, otherwise 4.5 - 7.1 normal)
+              if (prev.pressure_inside_veins && !locks.pressure_inside_veins) {
+                var cvpItem = prev.pressure_inside_veins;
+                var currCvp = parseFloat(cvpItem.value);
+                if (!Number.isFinite(currCvp)) currCvp = 5.2;
+                var nextCvp = currCvp;
+                if (isCardiacArrest) {
+                  // Interconnected: Cardiac standstill causes central venous pooling (~9.9 mmHg Red)
+                  nextCvp = Number(stepTowardTarget(currCvp, 9.9, 0.6).toFixed(1));
+                } else if (isSevereBradycardia || isRedTachycardia) {
+                  nextCvp = Number(stepTowardTarget(currCvp, 8.3, 0.4).toFixed(1));
+                } else if (currCvp > 7.2 || currCvp < 4.4) {
+                  nextCvp = Number(stepTowardTarget(currCvp, 5.2, 0.4).toFixed(1));
+                } else {
+                  nextCvp = Number(stepBounded(currCvp, 4.5, 5.2, 6.2, 7.1, 0.06, 0.14, isActive, isCooldown).toFixed(1));
+                }
+                histBuf.pressure_inside_veins = (histBuf.pressure_inside_veins || [5.2]).concat([nextCvp]).slice(-10);
+                nextMap.pressure_inside_veins = Object.assign({}, cvpItem, {
+                  value: nextCvp.toFixed(1),
+                });
+              }
+
+              // Unified Pressure (Systolic/Diastolic BP, mmHg, Line graph: coupled to HR arrest/tachycardia, otherwise steady ~116/75 normal)
+              if (prev.pressure && !locks.pressure) {
+                var bpItem = prev.pressure;
+                var bpParts = String(bpItem.value || "116/75").split("/");
+                var currSys = parseInt(bpParts[0], 10);
+                var currDia = bpParts.length > 1 ? parseInt(bpParts[1], 10) : 75;
+                if (!Number.isFinite(currSys)) currSys = 116;
+                if (!Number.isFinite(currDia)) currDia = 75;
+                var nextSysVal = currSys;
+                var nextDiaVal = currDia;
+
+                if (isCardiacArrest) {
+                  // Interconnected: Stopped heartbeats -> rapid arterial pressure collapse (~58/34 mmHg Red)
+                  nextSysVal = Math.round(stepTowardTarget(currSys, 58, 8));
+                  nextDiaVal = Math.round(stepTowardTarget(currDia, 34, 5));
+                } else if (isSevereBradycardia) {
+                  // Interconnected: Severe bradycardia -> hypotension (~82/50 mmHg Red)
+                  nextSysVal = Math.round(stepTowardTarget(currSys, 82, 5));
+                  nextDiaVal = Math.round(stepTowardTarget(currDia, 50, 3));
+                } else if (isModerateBradycardia) {
+                  nextSysVal = Math.round(stepTowardTarget(currSys, 90, 4));
+                  nextDiaVal = Math.round(stepTowardTarget(currDia, 56, 2));
+                } else if (isRedTachycardia) {
+                  // Interconnected: Severe tachycardia -> hypertensive surge (~159/98 mmHg Red)
+                  nextSysVal = Math.round(stepTowardTarget(currSys, 159, 5));
+                  nextDiaVal = Math.round(stepTowardTarget(currDia, 98, 3));
+                } else if (isYellowTachycardia) {
+                  // Interconnected: Moderate tachycardia -> elevated blood pressure (~142/90 mmHg Yellow)
+                  nextSysVal = Math.round(stepTowardTarget(currSys, 142, 4));
+                  nextDiaVal = Math.round(stepTowardTarget(currDia, 90, 2));
+                } else if (currSys > 128 || currSys < 110 || currDia > 82 || currDia < 70) {
+                  // Smooth recovery back to nominal Blue ~116/75
+                  nextSysVal = Math.round(stepTowardTarget(currSys, 116, 4));
+                  nextDiaVal = Math.round(stepTowardTarget(currDia, 75, 3));
+                } else {
+                  nextSysVal = Math.round(stepBounded(currSys, 113, 116, 120, 125, 0.4, 1.0, isActive, isCooldown));
+                  nextDiaVal = Math.round(stepBounded(currDia, 72, 75, 77, 80, 0.3, 0.8, isActive, isCooldown));
+                  if (nextDiaVal > nextSysVal - 32) {
+                    nextDiaVal = nextSysVal - 32;
+                  }
+                }
+
+                var prevSysSeries = Array.isArray(bpItem.series) ? bpItem.series : [116];
+                var prevDiaSeries = Array.isArray(bpItem.seriesSecondary) ? bpItem.seriesSecondary : [75];
+                var nextSysSeries = prevSysSeries.concat([nextSysVal]).slice(-20);
+                var nextDiaSeries = prevDiaSeries.concat([nextDiaVal]).slice(-20);
+                var nextBpLabels = nextSysSeries.map(function (_, idx) {
+                  var secsAgo = nextSysSeries.length - 1 - idx;
+                  return secsAgo === 0 ? "Now" : "-" + secsAgo + "s";
+                });
+                nextMap.pressure = Object.assign({}, bpItem, {
+                  value: nextSysVal + "/" + nextDiaVal,
+                  series: nextSysSeries,
+                  seriesSecondary: nextDiaSeries,
+                  seriesLabels: nextBpLabels,
+                });
+              }
+
+              var isOuterSpace = envModeRef.current === "outer-space";
+
+              // Temperature inside costume (°C, Line graph: ~21.6 °C in Spaceship, ~19.8 °C in Outer Space EVA; coupled to high radiation, external temp, or low battery)
+              if (prev.temp_inside_costume && !locks.temp_inside_costume) {
+                var suitInItem = prev.temp_inside_costume;
+                var suitInBase = isOuterSpace ? 19.8 : 21.6;
+                var currSuitIn = parseFloat(suitInItem.value);
+                if (!Number.isFinite(currSuitIn)) currSuitIn = suitInBase;
+                var nextSuitIn = currSuitIn;
+                if (isRedBatteryLow || (locks.temp_outside_costume && currSuitOutVal > 40.0)) {
+                  // Interconnected: Critical battery cooling loss or extreme external heat -> suit internal temp rises (>24.5 °C Red)
+                  nextSuitIn = Number(stepTowardTarget(currSuitIn, 24.8, 0.35).toFixed(1));
+                } else if (
+                  isRedRadiation ||
+                  isYellowRadiation ||
+                  isYellowBatteryLow ||
+                  (locks.temp_outside_costume && currSuitOutVal >= 14.0 && currSuitOutVal < 18.0)
+                ) {
+                  // Interconnected: High radiation thermal load, low battery, or warm external suit -> suit temp rises (~23.7 °C Yellow)
+                  nextSuitIn = Number(stepTowardTarget(currSuitIn, 23.7, 0.25).toFixed(1));
+                } else if (isOuterSpace) {
+                  if (currSuitIn > 20.5 || currSuitIn < 19.2) {
+                    nextSuitIn = Number(stepTowardTarget(currSuitIn, 19.8, 0.25).toFixed(1));
+                  } else {
+                    nextSuitIn = Number(
+                      stepBounded(currSuitIn, 19.3, 19.8, 20.3, 20.6, 0.03, 0.06, isActive, isCooldown).toFixed(1)
+                    );
+                  }
+                } else if (currSuitIn > 22.8 || currSuitIn < 20.9) {
+                  nextSuitIn = Number(stepTowardTarget(currSuitIn, 21.6, 0.25).toFixed(1));
+                } else {
+                  nextSuitIn = Number(
+                    stepBounded(currSuitIn, 21.0, 21.6, 22.2, 22.7, 0.03, 0.06, isActive, isCooldown).toFixed(1)
+                  );
+                }
+                var prevSuitInSeries = Array.isArray(suitInItem.series) ? suitInItem.series : [suitInBase];
+                var nextSuitInSeries = prevSuitInSeries.concat([nextSuitIn]).slice(-16);
+                var nextSuitInLabels = nextSuitInSeries.map(function (_, idx) {
+                  var secsAgo = nextSuitInSeries.length - 1 - idx;
+                  return secsAgo === 0 ? "Now" : "-" + secsAgo + "s";
+                });
+                nextMap.temp_inside_costume = Object.assign({}, suitInItem, {
+                  value: nextSuitIn.toFixed(1),
+                  series: nextSuitInSeries,
+                  seriesLabels: nextSuitInLabels,
+                });
+              }
+
+              // Temperature outside costume (°C, Line graph: ~21.4 °C in Spaceship cabin, ~ -270.1 °C in Outer Space)
+              if (prev.temp_outside_costume && !locks.temp_outside_costume) {
+                var suitOutItem = prev.temp_outside_costume;
+                var suitOutTarget = isOuterSpace ? -270.1 : 21.4;
+                var currSuitOut = parseFloat(suitOutItem.value);
+                if (!Number.isFinite(currSuitOut)) currSuitOut = suitOutTarget;
+                var nextSuitOut = suitOutTarget;
+                if (isOuterSpace) {
+                  if (currSuitOut > -268.5 || currSuitOut < -271.5) {
+                    nextSuitOut = -270.1;
+                  } else {
+                    nextSuitOut = Number(
+                      stepBounded(currSuitOut, -270.5, -270.1, -269.6, -269.4, 0.04, 0.1, false, false).toFixed(1)
+                    );
+                  }
+                } else {
+                  if (currSuitOut < 20.5 || currSuitOut > 22.4) {
+                    nextSuitOut = 21.4;
+                  } else {
+                    nextSuitOut = Number(
+                      stepBounded(currSuitOut, 21.0, 21.4, 21.9, 22.1, 0.03, 0.06, false, false).toFixed(1)
+                    );
+                  }
+                }
+                var prevSuitOutSeries = Array.isArray(suitOutItem.series) ? suitOutItem.series : [suitOutTarget];
+                var nextSuitOutSeries = prevSuitOutSeries.concat([nextSuitOut]).slice(-16);
+                var nextSuitOutLabels = nextSuitOutSeries.map(function (_, idx) {
+                  var secsAgo = nextSuitOutSeries.length - 1 - idx;
+                  return secsAgo === 0 ? "Now" : "-" + secsAgo + "s";
+                });
+                nextMap.temp_outside_costume = Object.assign({}, suitOutItem, {
+                  value: nextSuitOut.toFixed(1),
+                  series: nextSuitOutSeries,
+                  seriesLabels: nextSuitOutLabels,
+                });
+              }
+
+              // Oxygen left (% or L / kPa, Number: realistic gradual consumption, auto-refills at 46% so it never randomly hits yellow/red)
+              if (prev.oxygen_left && !locks.oxygen_left) {
+                var o2Item = prev.oxygen_left;
+                var currO2Pct = parseFloat(o2Item.value);
+                if (!Number.isFinite(currO2Pct)) currO2Pct = 88.0;
+                var o2Drain = isOuterSpace ? 0.03 : isActive ? 0.02 : 0.01;
+                var nextO2Pct = currO2Pct <= 46.0 ? 94.0 : Number((currO2Pct - o2Drain).toFixed(2));
+                histBuf.oxygen_left = (histBuf.oxygen_left || [88.0]).concat([nextO2Pct]).slice(-10);
+                var o2Liters = Math.round(nextO2Pct * 6.0);
+                var o2Kpa = isOuterSpace
+                  ? (29.5 + Math.random() * 0.2).toFixed(1)
+                  : (101.2 + Math.random() * 0.2).toFixed(1);
+                nextMap.oxygen_left = Object.assign({}, o2Item, {
+                  value: nextO2Pct.toFixed(2) + "% (" + o2Liters + " L / " + o2Kpa + " kPa)",
+                });
+              }
+
+              // Battery level (%, Number: realistic gradual discharge, auto-recharges at 43% so it never randomly hits yellow/red)
+              if (prev.battery_level && !locks.battery_level) {
+                var batItem = prev.battery_level;
+                var currBat = parseFloat(batItem.value);
+                if (!Number.isFinite(currBat)) currBat = 92.4;
+                var batDrain = isOuterSpace ? 0.03 : isActive ? 0.02 : 0.01;
+                var nextBat = currBat <= 43.0 ? 98.0 : Number((currBat - batDrain).toFixed(2));
+                histBuf.battery_level = (histBuf.battery_level || [92.4]).concat([nextBat]).slice(-10);
+                nextMap.battery_level = Object.assign({}, batItem, {
+                  value: nextBat.toFixed(2),
+                });
+              }
+
+              // Fast 1-second interconnected updates for Skin Surface Temperature & Respiration Rate when driven by radiation / thermal / cardiac / hypoxic anomalies
+              var hasSkinCoupling =
+                isRedRadiation ||
+                isYellowRadiation ||
+                isRedThermalDriver ||
+                isYellowThermalDriver ||
+                isCardiacArrest;
+              if (prev.skin_surface && !locks.skin_surface && (hasSkinCoupling || tick % 50 === 0)) {
+                var skinItem = prev.skin_surface;
+                var skinBase = isOuterSpace ? 36.6 : 36.4;
+                var currSkin = parseFloat(skinItem.value);
+                if (!Number.isFinite(currSkin)) currSkin = skinBase;
+                var nextSkin = currSkin;
+                if (isRedRadiation || isRedThermalDriver) {
+                  // Interconnected: Super high radiation (>0.085 R) or extreme suit/cabin heat -> skin temp rises into Red (>37.9 °C, ~38.3 °C)
+                  nextSkin = Number(stepTowardTarget(currSkin, 38.3, 0.25).toFixed(1));
+                } else if (isYellowRadiation || isYellowThermalDriver) {
+                  // Interconnected: Elevated radiation (>0.055 R) or high suit/cabin heat -> skin temp rises into Yellow (>37.2 °C, ~37.6 °C)
+                  nextSkin = Number(stepTowardTarget(currSkin, 37.6, 0.2).toFixed(1));
+                } else if (isCardiacArrest) {
+                  // Interconnected: Cardiac standstill -> peripheral skin cooling (~35.4 °C Yellow)
+                  nextSkin = Number(stepTowardTarget(currSkin, 35.4, 0.2).toFixed(1));
+                } else if (currSkin > 36.9 || currSkin < 36.0) {
+                  // Smoothly recover back to nominal when radiation/thermal anomaly clears
+                  nextSkin = Number(stepTowardTarget(currSkin, skinBase, 0.2).toFixed(1));
+                } else {
+                  nextSkin = Number(
+                    stepBounded(currSkin, 36.1, skinBase, 36.8, 36.9, 0.02, 0.04, isActive, isCooldown).toFixed(1)
+                  );
+                }
+                var prevSkinSeries = Array.isArray(skinItem.series) ? skinItem.series : [skinBase];
+                var nextSkinSeries = prevSkinSeries.concat([nextSkin]).slice(-12);
+                var nextSkinLabels = nextSkinSeries.map(function (_, idx) {
+                  var ago = (nextSkinSeries.length - 1 - idx) * (hasSkinCoupling ? 1 : 5);
+                  return ago === 0 ? "Now" : "-" + ago + "s";
+                });
+                nextMap.skin_surface = Object.assign({}, skinItem, {
+                  value: nextSkin.toFixed(1),
+                  series: nextSkinSeries,
+                  seriesLabels: nextSkinLabels,
+                });
+              }
+
+              var hasRespCoupling =
+                isCardiacArrest ||
+                isRedHypoxiaDriver ||
+                isYellowHypoxiaDriver ||
+                isRedTachycardia ||
+                isYellowTachycardia;
+              if (prev.respiration_rate && !locks.respiration_rate && (hasRespCoupling || tick % 100 === 0)) {
+                var rrItem = prev.respiration_rate;
+                var rrBase = isOuterSpace ? 17 : 14;
+                var currRr = parseInt(rrItem.value, 10);
+                if (!Number.isFinite(currRr)) currRr = rrBase;
+                var nextRr = currRr;
+                if (isCardiacArrest) {
+                  // Interconnected: Stopped heartbeats -> agonal hypoventilation / apnea (~5 breaths/min Red)
+                  nextRr = Math.round(stepTowardTarget(currRr, 5, 2));
+                } else if (isRedHypoxiaDriver || isRedTachycardia) {
+                  // Interconnected: Severe hypoxia/hypercapnia or extreme tachycardia -> hyperventilation (~29 breaths/min Red)
+                  nextRr = Math.round(stepTowardTarget(currRr, 29, 2));
+                } else if (isYellowHypoxiaDriver || isYellowTachycardia) {
+                  // Interconnected: Low O2 / high CO2 / tachycardia -> elevated respiration (~24 breaths/min Yellow)
+                  nextRr = Math.round(stepTowardTarget(currRr, 24, 2));
+                } else if (currRr > 19 || currRr < 12) {
+                  nextRr = Math.round(stepTowardTarget(currRr, rrBase, 2));
+                } else {
+                  nextRr = Math.round(
+                    stepBounded(
+                      currRr,
+                      isOuterSpace ? 15 : 12,
+                      rrBase,
+                      isOuterSpace ? 19 : 17,
+                      19,
+                      1,
+                      1,
+                      isActive,
+                      isCooldown
+                    )
+                  );
+                }
+                var prevRrSeries = Array.isArray(rrItem.series) ? rrItem.series : [rrBase];
+                var nextRrSeries = prevRrSeries.concat([nextRr]).slice(-12);
+                var nextRrLabels = nextRrSeries.map(function (_, idx) {
+                  var ago = (nextRrSeries.length - 1 - idx) * (hasRespCoupling ? 1 : 10);
+                  return ago === 0 ? "Now" : "-" + ago + "s";
+                });
+                nextMap.respiration_rate = Object.assign({}, rrItem, {
+                  value: String(nextRr),
+                  series: nextRrSeries,
+                  seriesLabels: nextRrLabels,
+                });
+              }
+            }
+
+            // 4. Every 5.0s (tick % 50 === 0): Radiation exposure (in Röntgen R), Metabolic rate (Number), Outside temp, Humidity
+            if (tick % 50 === 0) {
+              var isSpace5s = envModeRef.current === "outer-space";
+              if (prev.radiation_exposure && !locks.radiation_exposure) {
+                var radItem = prev.radiation_exposure;
+                var radBase = isSpace5s ? 0.048 : 0.038;
+                var currRad = parseFloat(radItem.value);
+                if (!Number.isFinite(currRad) || currRad > 0.053) currRad = radBase;
+                if (sim.radAnomalyTicks <= 0 && Math.random() < 0.03) {
+                  sim.radAnomalyTicks = 2 + Math.floor(Math.random() * 3);
+                }
+                var inAnomaly = sim.radAnomalyTicks > 0;
+                if (inAnomaly) sim.radAnomalyTicks -= 1;
+                // Strictly bounded below 0.055 R and step <= 0.002 R so random radiation never triggers warnings
+                var nextRad = isSpace5s
+                  ? Number(
+                      stepBounded(currRad, 0.045, 0.048, 0.051, 0.052, 0.001, 0.002, inAnomaly, !inAnomaly && currRad > 0.050).toFixed(3)
+                    )
+                  : Number(
+                      stepBounded(currRad, 0.034, 0.038, 0.043, 0.046, 0.001, 0.002, inAnomaly, !inAnomaly && currRad > 0.043).toFixed(3)
+                    );
+                var prevRadSeries = Array.isArray(radItem.series) ? radItem.series : [radBase];
+                var nextRadSeries = prevRadSeries.concat([nextRad]).slice(-7);
+                nextMap.radiation_exposure = Object.assign({}, radItem, {
+                  value: nextRad.toFixed(3),
+                  series: nextRadSeries,
+                  seriesLabels: ["-30s", "-25s", "-20s", "-15s", "-10s", "-5s", "Now"].slice(-nextRadSeries.length),
+                });
+              }
+
+              if (prev.metabolic_rate && !locks.metabolic_rate) {
+                var metItem = prev.metabolic_rate;
+                var metBase = isSpace5s ? 146.0 : 92.5;
+                var currMet = parseFloat(metItem.value);
+                if (!Number.isFinite(currMet)) currMet = metBase;
+                var nextMet = currMet;
+                if (isRedTachycardia) {
+                  nextMet = stepTowardTarget(currMet, 262.0, 18.0);
+                } else if (isYellowTachycardia || isRedThermalDriver) {
+                  nextMet = stepTowardTarget(currMet, 212.0, 14.0);
+                } else if (isCardiacArrest) {
+                  nextMet = stepTowardTarget(currMet, 48.0, 12.0);
+                } else if (currMet > 184.0 || currMet < 75.0) {
+                  nextMet = stepTowardTarget(currMet, metBase, 14.0);
+                } else {
+                  nextMet = isSpace5s
+                    ? stepBounded(currMet, 132.0, 146.0, 162.0, 182.0, 1.5, 3.5, isActive, isCooldown)
+                    : stepBounded(currMet, 82.0, 92.5, 112.0, 180.0, 1.5, 3.5, isActive, isCooldown);
+                }
+                var cleanMet = Number(nextMet.toFixed(1));
+                histBuf.metabolic_rate = (histBuf.metabolic_rate || [metBase]).concat([cleanMet]).slice(-10);
+                var wattsVal = Math.round(cleanMet * 1.163);
+                nextMap.metabolic_rate = Object.assign({}, metItem, {
+                  value: cleanMet.toFixed(1) + " kcal/h (" + wattsVal + " W)",
+                });
+              }
+
+              if (prev.outside_temperature && !locks.outside_temperature) {
+                var cabTempItem = prev.outside_temperature;
+                var outTempTarget = isSpace5s ? -270.4 : 21.4;
+                var currCabTemp = parseFloat(cabTempItem.value);
+                if (!Number.isFinite(currCabTemp)) currCabTemp = outTempTarget;
+                var nextCabTemp = outTempTarget;
+                if (isSpace5s) {
+                  if (currCabTemp > -268.0 || currCabTemp < -271.5) {
+                    nextCabTemp = -270.4;
+                  } else {
+                    nextCabTemp = Number(
+                      stepBounded(currCabTemp, -270.6, -270.4, -269.9, -269.7, 0.03, 0.08, false, false).toFixed(1)
+                    );
+                  }
+                } else {
+                  if (currCabTemp < 20.4 || currCabTemp > 22.5) {
+                    nextCabTemp = 21.4;
+                  } else {
+                    nextCabTemp = Number(
+                      stepBounded(currCabTemp, 20.9, 21.4, 22.0, 22.3, 0.03, 0.06, false, false).toFixed(1)
+                    );
+                  }
+                }
+                var prevCabSeries = Array.isArray(cabTempItem.series) ? cabTempItem.series : [outTempTarget];
+                var nextCabSeries = prevCabSeries.concat([nextCabTemp]).slice(-12);
+                var nextCabLabels = nextCabSeries.map(function (_, idx) {
+                  var ago = (nextCabSeries.length - 1 - idx) * 5;
+                  return ago === 0 ? "Now" : "-" + ago + "s";
+                });
+                nextMap.outside_temperature = Object.assign({}, cabTempItem, {
+                  value: nextCabTemp.toFixed(1),
+                  series: nextCabSeries,
+                  seriesLabels: nextCabLabels,
+                });
+              }
+
+              if (prev.humidity && !locks.humidity) {
+                var humItem = prev.humidity;
+                var humBase = isSpace5s ? 37.5 : 44.0;
+                var currHum = parseFloat(humItem.value);
+                if (!Number.isFinite(currHum)) currHum = humBase;
+                var nextHum = currHum;
+                if (isRedThermalDriver) {
+                  // Interconnected: High suit/cabin heat -> heavy perspiration increases humidity (>60% Red)
+                  nextHum = Number(stepTowardTarget(currHum, 61.5, 2.2).toFixed(1));
+                } else if (isYellowThermalDriver || isRedRadiation) {
+                  // Interconnected: Moderate thermal load -> perspiration increases humidity (>52% Yellow)
+                  nextHum = Number(stepTowardTarget(currHum, 54.4, 1.8).toFixed(1));
+                } else if (isSpace5s) {
+                  if (currHum > 40.5 || currHum < 35.5) {
+                    nextHum = Number(stepTowardTarget(currHum, 37.5, 1.5).toFixed(1));
+                  } else {
+                    nextHum = Number(
+                      stepBounded(currHum, 36.0, 37.5, 39.2, 40.0, 0.1, 0.2, isActive, isCooldown).toFixed(1)
+                    );
+                  }
+                } else if (currHum > 49.5 || currHum < 40.0) {
+                  nextHum = Number(stepTowardTarget(currHum, 44.0, 1.8).toFixed(1));
+                } else {
+                  nextHum = Number(
+                    stepBounded(currHum, 41.0, 44.0, 47.0, 49.0, 0.1, 0.2, isActive, isCooldown).toFixed(1)
+                  );
+                }
+                var prevHumSeries = Array.isArray(humItem.series) ? humItem.series : [humBase];
+                var nextHumSeries = prevHumSeries.concat([nextHum]).slice(-12);
+                var nextHumLabels = nextHumSeries.map(function (_, idx) {
+                  var ago = (nextHumSeries.length - 1 - idx) * 5;
+                  return ago === 0 ? "Now" : "-" + ago + "s";
+                });
+                nextMap.humidity = Object.assign({}, humItem, {
+                  value: nextHum.toFixed(1),
+                  series: nextHumSeries,
+                  seriesLabels: nextHumLabels,
+                });
+              }
+            }
+
+            // 5. Every 10.0s (tick % 100 === 0): Sleep amount (per sol) & Exercise activity (per sol)
+            if (tick % 100 === 0) {
+              if (prev.sleep_amount && !locks.sleep_amount) {
+                var slpItem = prev.sleep_amount;
+                var currSlp = parseFloat(slpItem.value);
+                if (!Number.isFinite(currSlp)) currSlp = 7.5;
+                var nextSlp = Number(stepBounded(currSlp, 7.0, 7.5, 8.1, 8.2, 0.1, 0.15, false, false).toFixed(1));
+                var prevSlpSeries = Array.isArray(slpItem.series) ? slpItem.series.slice() : [7.8, 7.2, 8.0, 6.9, 7.4, 7.6, 7.5];
+                prevSlpSeries[prevSlpSeries.length - 1] = nextSlp;
+                nextMap.sleep_amount = Object.assign({}, slpItem, {
+                  value: nextSlp.toFixed(1),
+                  series: prevSlpSeries,
+                });
+              }
+
+              if (prev.exercise_activity && !locks.exercise_activity) {
+                var exItem = prev.exercise_activity;
+                var currEx = parseInt(exItem.value, 10);
+                if (!Number.isFinite(currEx)) currEx = 90;
+                var nextEx = Math.round(stepBounded(currEx, 80, 90, 104, 112, 1, 2, isActive, isCooldown));
+                var exKcal = Math.round(nextEx * 7.1);
+                var prevExSeries = Array.isArray(exItem.series) ? exItem.series.slice() : [85, 90, 95, 80, 90, 100, 90];
+                prevExSeries[prevExSeries.length - 1] = nextEx;
+                nextMap.exercise_activity = Object.assign({}, exItem, {
+                  value: nextEx + " min/sol (" + exKcal + " kcal/sol)",
+                  series: prevExSeries,
+                });
+              }
+            }
+
+            return nextMap;
+          });
+        }, 100);
+
+        return function () {
+          window.clearInterval(simInterval);
+        };
+      },
+      []
+    );
+
+    var sample = getAstronautSampleData(astronaut, slotIndex);
+    var selectedPart = selectedPartId ? sample.bodyParts[selectedPartId] : null;
+    var displayName = getAstronautFullName(astronaut) || "Name Surname";
+    var missionDay = (astronaut && astronaut.missionDay) || 142;
+    var filteredHealthPlanRows = sample.healthPlanRows.filter(function (row) {
+      return Boolean(visibleVitals[row.id]);
+    });
+    var connectedToApi = browserOnline && !offlineMode;
+    var chronologicalHistory = apiHistory.slice().reverse();
+    var chartRates = chronologicalHistory
+      .map(function (record) {
+        var vitals = record && record.vitals ? record.vitals : record || {};
+        return Number(vitals.heart_rate);
+      })
+      .filter(function (value) {
+        return Number.isFinite(value);
+      });
+    var chartMinimum = chartRates.length ? Math.min.apply(Math, chartRates) : 0;
+    var chartMaximum = chartRates.length ? Math.max.apply(Math, chartRates) : 1;
+    var chartPolyline = chartRates
+      .map(function (value, index) {
+        var x = chartRates.length > 1 ? (index / (chartRates.length - 1)) * 280 : 140;
+        var spread = chartMaximum - chartMinimum || 1;
+        var y = 82 - ((value - chartMinimum) / spread) * 64;
+        return x.toFixed(1) + "," + y.toFixed(1);
+      })
+      .join(" ");
+    var latestApiRecord = apiHistory.length ? apiHistory[0] : null;
+    var latestApiVitals =
+      latestApiRecord && latestApiRecord.vitals ? latestApiRecord.vitals : latestApiRecord || {};
+    var apiProfileBaseline =
+      apiProfile && apiProfile.medical_baseline
+        ? apiProfile.medical_baseline
+        : astronaut && astronaut.medical_baseline
+        ? astronaut.medical_baseline
+        : {};
+
+    function createWarningLogObject(item, details, currentMeasurementsMap, isAdditionalCritical) {
+      var nowObj = new Date();
+      var pad2 = function (n) {
+        return String(n).padStart(2, "0");
+      };
+      var tsStr =
+        pad2(nowObj.getDate()) +
+        "/" +
+        pad2(nowObj.getMonth() + 1) +
+        "/" +
+        nowObj.getFullYear() +
+        " " +
+        pad2(nowObj.getHours()) +
+        ":" +
+        pad2(nowObj.getMinutes()) +
+        ":" +
+        pad2(nowObj.getSeconds());
+
+      var recSeries = [];
+      var recSecondary = null;
+      var recLabels = [];
+      if (Array.isArray(item.series) && item.series.length > 0) {
+        recSeries = item.series.slice(-10).map(function (v) {
+          return typeof v === "number" ? v : parseFloat(v);
+        });
+        if (Array.isArray(item.seriesSecondary) && item.seriesSecondary.length > 0) {
+          recSecondary = item.seriesSecondary.slice(-recSeries.length).map(function (v) {
+            return typeof v === "number" ? v : parseFloat(v);
+          });
+        }
+        var rawLbls = Array.isArray(item.seriesLabels) ? item.seriesLabels.slice(-recSeries.length) : [];
+        recLabels = recSeries.map(function (_, i) {
+          if (i === recSeries.length - 1) return "Trigger";
+          return rawLbls[i] || "-" + (recSeries.length - 1 - i) + "s";
+        });
+      } else {
+        var buf = (recentHistoryBufferRef.current && recentHistoryBufferRef.current[item.id]) || [];
+        var numCurr = parseFloat(item.value);
+        recSeries = buf.slice(-9);
+        if (Number.isFinite(numCurr)) {
+          recSeries.push(numCurr);
+        }
+        if (recSeries.length === 0) recSeries = [0];
+        recLabels = recSeries.map(function (_, i) {
+          return i === recSeries.length - 1 ? "Trigger" : "-" + (recSeries.length - 1 - i) + "s";
+        });
+      }
+
+      var mMap = currentMeasurementsMap || measurements || {};
+      var hrV = mMap.heart_rate ? mMap.heart_rate.value : "78";
+      var bpV = mMap.pressure ? mMap.pressure.value : "116/75";
+      var spo2V = mMap.oxygen_level_in_blood ? mMap.oxygen_level_in_blood.value : "98.6";
+      var rrV = mMap.respiration_rate ? mMap.respiration_rate.value : "14";
+      var suitTV = mMap.temp_inside_costume ? mMap.temp_inside_costume.value : "21.6";
+      var radV = mMap.radiation_exposure ? mMap.radiation_exposure.value : "0.038";
+      var snapshotStr =
+        "HR: " +
+        hrV +
+        " bpm | BP: " +
+        bpV +
+        " mmHg | SpO2: " +
+        spo2V +
+        "% | RR: " +
+        rrV +
+        " breaths/min | Suit Temp: " +
+        suitTV +
+        " °C | Rad: " +
+        radV +
+        " R";
+
+      var uniqueId = "WLOG-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+      var valStr = String(item.value);
+      var addlCrit = Boolean(isAdditionalCritical || details.isAdditionalCritical);
+      var effectiveSeverity = addlCrit ? "yellow" : details.level;
+      var countermeasuresStr = getCountermeasuresForWarning(
+        item.id,
+        addlCrit ? "red" : details.level,
+        details.instruction
+      );
+      var reasonText = addlCrit
+        ? details.reason.indexOf("Additional critical events occurred") === 0
+          ? details.reason
+          : "Additional critical events occurred: " + details.reason
+        : details.reason;
+
+      return {
+        id: uniqueId,
+        specId: item.id,
+        source: "SIMULATED TELEMETRY",
+        measurementName: item.name,
+        priority: details.priority,
+        severity: effectiveSeverity,
+        isAdditionalCritical: addlCrit,
+        status: addlCrit
+          ? "Warning — Additional Critical Event"
+          : details.level === "red"
+          ? "Critical — Initial SOS Triggered"
+          : "Active / Under Review",
+        sol: missionDay,
+        timestamp: tsStr,
+        triggerValue: valStr,
+        initialTriggerValue: valStr,
+        peakValue: valStr,
+        updateCount: 1,
+        unit: item.unit,
+        thresholdRule: item.threshold,
+        reason: reasonText,
+        countermeasures: countermeasuresStr,
+        chartType: item.chartType || "line",
+        recentRecords: recSeries,
+        recentSecondary: recSecondary,
+        recentLabels: recLabels,
+        concurrentSnapshot: snapshotStr,
+        analysisNotes: addlCrit
+          ? "Additional critical events occurred following the initial Red SOS trigger when " +
+            item.name +
+            " reached critical level " +
+            valStr +
+            (item.unit && item.unit !== "N/A" ? " " + item.unit : "") +
+            ". Recorded and displayed as a Yellow-style warning per SOS protocol. Possible Countermeasures: " +
+            countermeasuresStr
+          : "Auto-recorded when " +
+            item.name +
+            " reached " +
+            valStr +
+            (item.unit && item.unit !== "N/A" ? " " + item.unit : "") +
+            " (" +
+            details.level.toUpperCase() +
+            "). Recent telemetry window (" +
+            recSeries.length +
+            " samples) captured around trigger. Possible Countermeasures: " +
+            countermeasuresStr,
+        manuallyEdited: false,
+      };
+    }
+
+    function isBigTelemetryChange(specId, prevValStr, newValStr, prevLevel, newLevel) {
+      if (prevLevel !== newLevel) return true;
+      if (String(prevValStr) === String(newValStr)) return false;
+
+      if (specId === "pressure") {
+        var p1 = String(prevValStr).split("/");
+        var p2 = String(newValStr).split("/");
+        var s1 = parseFloat(p1[0]);
+        var d1 = parseFloat(p1[1]);
+        var s2 = parseFloat(p2[0]);
+        var d2 = parseFloat(p2[1]);
+        if (Number.isFinite(s1) && Number.isFinite(s2) && Math.abs(s2 - s1) >= 3) return true;
+        if (Number.isFinite(d1) && Number.isFinite(d2) && Math.abs(d2 - d1) >= 2) return true;
+        return false;
+      }
+
+      var n1 = parseFloat(prevValStr);
+      var n2 = parseFloat(newValStr);
+      if (!Number.isFinite(n1) || !Number.isFinite(n2)) {
+        return String(prevValStr) !== String(newValStr);
+      }
+      var diff = Math.abs(n2 - n1);
+      if (specId === "heart_rate") return diff >= 3;
+      if (specId === "oxygen_level_in_blood") return diff >= 0.4;
+      if (specId === "radiation_exposure") return diff >= 0.003;
+      if (specId === "respiration_rate") return diff >= 1.5;
+      if (specId === "co2_level") return diff >= 0.2;
+      if (specId === "oxygen_left" || specId === "battery_level") return diff >= 1.0;
+      if (
+        specId === "temp_inside_costume" ||
+        specId === "skin_surface" ||
+        specId === "temp_outside_costume" ||
+        specId === "outside_temperature"
+      ) {
+        return diff >= 0.3;
+      }
+      if (specId === "electrocardiogram") {
+        return diff >= 0.1 || String(prevValStr) !== String(newValStr);
+      }
+      var base = Math.max(Math.abs(n1), 0.001);
+      return diff / base >= 0.025;
+    }
+
+    // Watch measurements for:
+    // 1. Automatic 5-second minimum warning hold (latchedWarningsRef) so any concerning warning stays >= 5s no matter what
+    // 2. Automatic Warning Log recording whenever a parameter triggers Yellow or Red, PLUS automatic in-place updates when big changes occur
+    // 3. Initial Red trigger opens full-screen SOS once; any subsequent Red triggers after the initial Red warning are recorded as warnings and displayed like Yellow warnings stating "Additional critical events occurred"
+    useEffect(
+      function () {
+        if (!measurements) return;
+        var nowMs = Date.now();
+        var shouldOpenInitialSos = false;
+        var ackMap = acknowledgedRedsRef.current || {};
+        var latches = latchedWarningsRef.current || {};
+        var lastLogged = lastLoggedLevelRef.current || {};
+        var logOps = [];
+
+        // Check if any measurement is currently in raw Red state
+        var anyRawRedNow = MEASUREMENT_SPECS.some(function (spec) {
+          var it = measurements[spec.id];
+          return it && getMeasurementAlertLevel(it) === "red";
+        });
+        if (!anyRawRedNow) {
+          initialRedSosSpecRef.current = null;
+          acknowledgedRedsRef.current = {};
+        }
+
+        MEASUREMENT_SPECS.forEach(function (spec) {
+          var id = spec.id;
+          var item = measurements[id];
+          if (!item) return;
+          var rawDetails = getMeasurementAlertDetails(item);
+          var isAdditionalCritical = false;
+
+          if (rawDetails.level === "red") {
+            if (!initialRedSosSpecRef.current) {
+              initialRedSosSpecRef.current = id;
+              isAdditionalCritical = false;
+              if (!ackMap.__initialSosAcknowledged) {
+                shouldOpenInitialSos = true;
+                ackMap.__initialSosAcknowledged = true;
+              }
+            } else if (initialRedSosSpecRef.current === id) {
+              isAdditionalCritical = false;
+            } else {
+              // Another Red trigger occurred AFTER the initial Red warning -> treat as warning & display like Yellow warning
+              isAdditionalCritical = true;
+            }
+          }
+
+          var effectiveDetails = isAdditionalCritical
+            ? {
+                level: "yellow",
+                isAdditionalCritical: true,
+                priority: rawDetails.priority,
+                reason: "Additional critical events occurred: " + rawDetails.reason,
+                instruction: rawDetails.instruction,
+              }
+            : rawDetails;
+
+          var rawTrack = lastLogged[id];
+          var track =
+            rawTrack && typeof rawTrack === "object"
+              ? rawTrack
+              : { level: "normal", logId: null, lastValueStr: "", lastUpdateMs: 0, isAdditionalCritical: false };
+
+          if (effectiveDetails.level === "yellow" || effectiveDetails.level === "red") {
+            if (!latches[id]) {
+              latches[id] = {
+                id: id,
+                triggeredAt: nowMs,
+                minHoldUntil: nowMs + 5000,
+                itemSnapshot: Object.assign({}, item),
+                details: effectiveDetails,
+                dismissed: false,
+                dismissedVal: null,
+                dismissRequested: false,
+              };
+            } else {
+              latches[id].itemSnapshot = Object.assign({}, item);
+              latches[id].details = effectiveDetails;
+              if (
+                (rawDetails.level === "red" && track.level === "normal") ||
+                track.isAdditionalCritical !== isAdditionalCritical
+              ) {
+                latches[id].minHoldUntil = nowMs + 5000;
+                latches[id].dismissed = false;
+              }
+            }
+
+            if (track.level === "normal" || !track.logId) {
+              var newLogObj = createWarningLogObject(item, effectiveDetails, measurements, isAdditionalCritical);
+              lastLogged[id] = {
+                level: effectiveDetails.level,
+                isAdditionalCritical: isAdditionalCritical,
+                logId: newLogObj.id,
+                lastValueStr: String(item.value),
+                lastUpdateMs: nowMs,
+              };
+              logOps.push({
+                type: "insert",
+                specId: id,
+                log: newLogObj,
+              });
+            } else if (
+              isBigTelemetryChange(id, track.lastValueStr, String(item.value), track.level, effectiveDetails.level) ||
+              track.isAdditionalCritical !== isAdditionalCritical
+            ) {
+              var prevValRecorded = track.lastValueStr;
+              var prevSeverity = track.level;
+              var freshSnap = createWarningLogObject(item, effectiveDetails, measurements, isAdditionalCritical);
+              lastLogged[id] = {
+                level: effectiveDetails.level,
+                isAdditionalCritical: isAdditionalCritical,
+                logId: track.logId,
+                lastValueStr: String(item.value),
+                lastUpdateMs: nowMs,
+              };
+              logOps.push({
+                type: "update",
+                specId: id,
+                logId: track.logId,
+                fresh: freshSnap,
+                prevValStr: prevValRecorded,
+                prevSeverity: prevSeverity,
+              });
+            }
+          } else {
+            if (latches[id]) {
+              if (nowMs >= latches[id].minHoldUntil) {
+                delete latches[id];
+                lastLogged[id] = {
+                  level: "normal",
+                  isAdditionalCritical: false,
+                  logId: null,
+                  lastValueStr: String(item.value),
+                  lastUpdateMs: nowMs,
+                };
+              }
+            } else {
+              lastLogged[id] = {
+                level: "normal",
+                isAdditionalCritical: false,
+                logId: null,
+                lastValueStr: String(item.value),
+                lastUpdateMs: nowMs,
+              };
+            }
+          }
+
+          // If user requested dismissal, only allow removal after the 5-second minimum hold!
+          if (latches[id] && latches[id].dismissRequested && nowMs >= latches[id].minHoldUntil) {
+            var latchedVal = String(
+              latches[id].dismissRequestedVal ||
+                (latches[id].itemSnapshot ? latches[id].itemSnapshot.value : item.value)
+            );
+            delete latches[id];
+            setDismissedWarnings(function (prev) {
+              if (prev[id] === latchedVal) return prev;
+              var next = Object.assign({}, prev);
+              next[id] = latchedVal;
+              return next;
+            });
+          }
+        });
+
+        if (logOps.length > 0) {
+          setWarningLogs(function (prevLogs) {
+            var nextLogs = prevLogs.slice();
+            var toPrepend = [];
+
+            logOps.forEach(function (op) {
+              if (op.type === "insert") {
+                toPrepend.push(op.log);
+              } else if (op.type === "update") {
+                var foundIndex = nextLogs.findIndex(function (entry) {
+                  return entry.id === op.logId;
+                });
+                if (foundIndex !== -1) {
+                  var existing = nextLogs[foundIndex];
+                  var newCount = (existing.updateCount || 1) + 1;
+                  var initVal = existing.initialTriggerValue || existing.triggerValue;
+                  var unitSuffix =
+                    op.fresh.unit && op.fresh.unit !== "N/A" ? " " + op.fresh.unit.split(" ")[0] : "";
+                  var addlCritFlag = Boolean(existing.isAdditionalCritical || op.fresh.isAdditionalCritical);
+                  var autoNote = existing.manuallyEdited
+                    ? existing.analysisNotes
+                    : (addlCritFlag
+                        ? "Additional critical events occurred (auto-tracked #" + newCount + "): "
+                        : "Auto-tracked warning (" + newCount + " updates): ") +
+                      "Initial trigger at " +
+                      initVal +
+                      unitSuffix +
+                      " → latest big change to " +
+                      op.fresh.triggerValue +
+                      unitSuffix +
+                      (addlCritFlag ? " [ADDITIONAL CRITICAL EVENT WARNING]" : " (" + op.fresh.severity.toUpperCase() + ")") +
+                      ". Possible Countermeasures: " +
+                      op.fresh.countermeasures;
+
+                  nextLogs[foundIndex] = Object.assign({}, existing, {
+                    severity: addlCritFlag
+                      ? "yellow"
+                      : existing.severity === "red" || op.fresh.severity === "red"
+                      ? "red"
+                      : op.fresh.severity,
+                    isAdditionalCritical: addlCritFlag,
+                    status: addlCritFlag
+                      ? "Warning — Additional Critical Event (#" + newCount + ")"
+                      : op.fresh.severity === "red"
+                      ? "Critical — Initial SOS Triggered"
+                      : existing.manuallyEdited
+                      ? existing.status
+                      : "Active — Auto-Updated (#" + newCount + ")",
+                    timestamp: op.fresh.timestamp,
+                    sol: op.fresh.sol,
+                    triggerValue: op.fresh.triggerValue,
+                    initialTriggerValue: initVal,
+                    peakValue: op.fresh.triggerValue,
+                    updateCount: newCount,
+                    reason: op.fresh.reason,
+                    countermeasures: existing.manuallyEdited
+                      ? existing.countermeasures || op.fresh.countermeasures
+                      : op.fresh.countermeasures,
+                    recentRecords: op.fresh.recentRecords,
+                    recentSecondary: op.fresh.recentSecondary,
+                    recentLabels: op.fresh.recentLabels,
+                    concurrentSnapshot: op.fresh.concurrentSnapshot,
+                    analysisNotes: autoNote,
+                  });
+                } else {
+                  // Target log was deleted earlier; insert fresh log and update ref
+                  toPrepend.push(op.fresh);
+                  if (lastLoggedLevelRef.current[op.specId]) {
+                    lastLoggedLevelRef.current[op.specId].logId = op.fresh.id;
+                  }
+                }
+              }
+            });
+
+            var finalLogs = toPrepend.concat(nextLogs);
+            saveStoredWarningLogs(astroKey, finalLogs);
+            return finalLogs;
+          });
+        }
+
+        if (shouldOpenInitialSos && !alertActive) {
+          setDiagnosticActive(false);
+          setAlertCountdown(20);
+          setAlertActive(true);
+        }
+      },
+      [measurements, alertActive]
+    );
+
     useEffect(function () {
       var timer = window.setInterval(function () {
         setNow(new Date());
@@ -3547,34 +6950,6 @@
         return next;
       });
     }
-
-    var sample = getAstronautSampleData(astronaut, slotIndex);
-    var selectedPart = selectedPartId ? sample.bodyParts[selectedPartId] : null;
-    var displayName = getAstronautFullName(astronaut) || "Name Surname";
-    var missionDay = (astronaut && astronaut.missionDay) || 142;
-    var filteredHealthPlanRows = sample.healthPlanRows.filter(function (row) {
-      return Boolean(visibleVitals[row.id]);
-    });
-    var connectedToApi = browserOnline && !offlineMode;
-    var chronologicalHistory = apiHistory.slice().reverse();
-    var chartRates = chronologicalHistory
-      .map(function (record) {
-        var vitals = record && record.vitals ? record.vitals : record || {};
-        return Number(vitals.heart_rate);
-      })
-      .filter(function (value) {
-        return Number.isFinite(value);
-      });
-    var chartMinimum = chartRates.length ? Math.min.apply(Math, chartRates) : 0;
-    var chartMaximum = chartRates.length ? Math.max.apply(Math, chartRates) : 1;
-    var chartPolyline = chartRates
-      .map(function (value, index) {
-        var x = chartRates.length > 1 ? (index / (chartRates.length - 1)) * 280 : 140;
-        var spread = chartMaximum - chartMinimum || 1;
-        var y = 82 - ((value - chartMinimum) / spread) * 64;
-        return x.toFixed(1) + "," + y.toFixed(1);
-      })
-      .join(" ");
 
     function openVitalsSetup() {
       setDraftVisibleVitals(Object.assign({}, visibleVitals));
@@ -3667,11 +7042,530 @@
     }
 
     function triggerTestAlert() {
-      setAlertCountdown(20);
-      setAlertActive(true);
+      setTestModalOpen(true);
     }
 
     function closeAlertScreen() {
+      acknowledgedRedsRef.current.__initialSosAcknowledged = true;
+      if (measurements) {
+        Object.keys(measurements).forEach(function (id) {
+          var item = measurements[id];
+          if (getMeasurementAlertLevel(item) === "red") {
+            acknowledgedRedsRef.current[id] = String(item.value);
+          }
+        });
+      }
+      setAlertActive(false);
+    }
+
+    function getEffectiveMeasurementAlertDetails(item) {
+      if (!item) {
+        return { level: "normal", reason: "", priority: 99 };
+      }
+      var raw = getMeasurementAlertDetails(item);
+      if (raw.level === "red") {
+        if (initialRedSosSpecRef.current && initialRedSosSpecRef.current !== item.id) {
+          return {
+            level: "yellow",
+            isAdditionalCritical: true,
+            priority: raw.priority,
+            reason: "Additional critical events occurred: " + raw.reason,
+            instruction: raw.instruction,
+          };
+        }
+        return raw;
+      }
+      if (raw.level === "yellow") {
+        return raw;
+      }
+      var latch = latchedWarningsRef.current[item.id];
+      if (latch && Date.now() < latch.minHoldUntil) {
+        return (
+          latch.details || {
+            level: "yellow",
+            reason: "Concerning reading held for minimum 5-second observation window.",
+            priority: MEASUREMENT_PRIORITY_MAP[item.id] || 50,
+          }
+        );
+      }
+      return raw;
+    }
+
+    function getEffectiveMeasurementAlertLevel(item) {
+      return getEffectiveMeasurementAlertDetails(item).level;
+    }
+
+    function dismissWarningItem(specId, currentVal) {
+      var latch = latchedWarningsRef.current[specId];
+      if (latch) {
+        latch.dismissed = true;
+        latch.dismissedVal = String(currentVal);
+        latch.dismissRequested = false;
+      }
+      setDismissedWarnings(function (prev) {
+        var next = Object.assign({}, prev);
+        next[specId] = String(currentVal);
+        return next;
+      });
+    }
+
+    function openMeasurementFromWarning(specId) {
+      if (!measurements || !measurements[specId]) return;
+      closeAlertScreen();
+      setDiagnosticActive(false);
+      setActiveTab("measurements");
+      setMeasEditMode(false);
+      setSelectedMeasId(specId);
+      setMeasModalMode("view");
+    }
+
+    function openWarningLogForMeasurement(specId) {
+      closeAlertScreen();
+      setDiagnosticActive(false);
+      setActiveTab("warning-log");
+      setWlogFilter("all");
+      setWlogSearch("");
+      var match = warningLogs.find(function (l) {
+        return l.specId === specId;
+      });
+      if (match) {
+        setSelectedWlogId(match.id);
+      }
+    }
+
+    function toggleWlogEditMode() {
+      setWlogEditMode(function (prev) {
+        return !prev;
+      });
+    }
+
+    function handleQuickUpdateWarningField(logId, fieldPatch) {
+      if (!logId) return;
+      setWarningLogs(function (prev) {
+        var next = prev.map(function (item) {
+          if (item.id !== logId) return item;
+          return Object.assign({}, item, fieldPatch, { manuallyEdited: true });
+        });
+        saveStoredWarningLogs(astroKey, next);
+        return next;
+      });
+    }
+
+    function openEditWarningLogModal(logEntry) {
+      if (!logEntry || !logEntry.id) return;
+      var specKey = logEntry.specId || "heart_rate";
+      setEditingLog({
+        isNew: false,
+        id: String(logEntry.id),
+        timestamp: logEntry.timestamp || formatTimestamp(new Date()),
+        solText: String(logEntry.sol !== undefined ? logEntry.sol : missionDay),
+        specId: specKey,
+        measurementName: logEntry.measurementName || "Heart rate",
+        priorityText: String(logEntry.priority || 1),
+        severity: logEntry.severity || "yellow",
+        isAdditionalCritical: Boolean(logEntry.isAdditionalCritical),
+        triggerValue: String(logEntry.triggerValue || ""),
+        initialTriggerValue: String(logEntry.initialTriggerValue || logEntry.triggerValue || ""),
+        updateCount: Number(logEntry.updateCount || 1),
+        unit: String(logEntry.unit || ""),
+        thresholdRule: String(logEntry.thresholdRule || ""),
+        reason: String(logEntry.reason || ""),
+        countermeasures: String(
+          logEntry.countermeasures || getCountermeasuresForWarning(specKey, logEntry.severity)
+        ),
+        recentRecordsText: Array.isArray(logEntry.recentRecords) ? logEntry.recentRecords.join(", ") : "",
+        recentSecondaryText: Array.isArray(logEntry.recentSecondary) ? logEntry.recentSecondary.join(", ") : "",
+        recentLabelsText: Array.isArray(logEntry.recentLabels) ? logEntry.recentLabels.join(", ") : "",
+        concurrentSnapshot: String(logEntry.concurrentSnapshot || ""),
+        status: logEntry.status || "Under Review",
+        analysisNotes: String(logEntry.analysisNotes || ""),
+      });
+    }
+
+    function openAddWarningLogModal() {
+      var defaultSpec = MEASUREMENT_SPECS[1] || MEASUREMENT_SPECS[0];
+      var liveItem = (measurements && measurements[defaultSpec.id]) || defaultSpec;
+      var recs = Array.isArray(liveItem.series) ? liveItem.series.slice(-10) : [80, 82, 85, 89, 94, 99, 103, 105];
+      var lbls = Array.isArray(liveItem.seriesLabels) ? liveItem.seriesLabels.slice(-recs.length) : [];
+      var newId = "WLOG-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6);
+      setEditingLog({
+        isNew: true,
+        id: newId,
+        timestamp: formatTimestamp(new Date()),
+        solText: String(missionDay),
+        specId: defaultSpec.id,
+        measurementName: defaultSpec.name,
+        priorityText: String(MEASUREMENT_PRIORITY_MAP[defaultSpec.id] || 2),
+        severity: "yellow",
+        isAdditionalCritical: false,
+        triggerValue: String(liveItem.value || "128"),
+        initialTriggerValue: String(liveItem.value || "128"),
+        updateCount: 1,
+        unit: String(defaultSpec.unit || "bpm"),
+        thresholdRule: String(defaultSpec.threshold || ""),
+        reason: "Manual warning log entry created for telemetry trend analysis.",
+        countermeasures: getCountermeasuresForWarning(defaultSpec.id, "yellow"),
+        recentRecordsText: recs.join(", "),
+        recentSecondaryText: Array.isArray(liveItem.seriesSecondary)
+          ? liveItem.seriesSecondary.slice(-10).join(", ")
+          : "",
+        recentLabelsText: lbls.join(", "),
+        concurrentSnapshot:
+          "HR: " +
+          ((measurements && measurements.heart_rate && measurements.heart_rate.value) || "80") +
+          " bpm | SpO2: " +
+          ((measurements && measurements.oxygen_level_in_blood && measurements.oxygen_level_in_blood.value) || "98") +
+          "% | BP: " +
+          ((measurements && measurements.pressure && measurements.pressure.value) || "120/78") +
+          " mmHg | Rad: " +
+          ((measurements && measurements.radiation_exposure && measurements.radiation_exposure.value) || "0.038") +
+          " R",
+        status: "Under Review",
+        analysisNotes: "Entered manually for flight surgeon review.",
+      });
+    }
+
+    function handleSaveWarningLogModal(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      if (!editingLog || !editingLog.id) return;
+      var parsedRecords = String(editingLog.recentRecordsText || "")
+        .split(",")
+        .map(function (s) {
+          return parseFloat(s.trim());
+        })
+        .filter(function (n) {
+          return Number.isFinite(n);
+        });
+      var parsedSecondary = String(editingLog.recentSecondaryText || "")
+        .split(",")
+        .map(function (s) {
+          return parseFloat(s.trim());
+        })
+        .filter(function (n) {
+          return Number.isFinite(n);
+        });
+      var parsedLabels = String(editingLog.recentLabelsText || "")
+        .split(",")
+        .map(function (s) {
+          return s.trim();
+        })
+        .filter(Boolean);
+      if (parsedLabels.length < parsedRecords.length) {
+        parsedLabels = parsedRecords.map(function (_, idx) {
+          var offset = parsedRecords.length - 1 - idx;
+          return offset === 0 ? "Trigger" : "-" + offset + "s";
+        });
+      }
+      var matchedSpec =
+        MEASUREMENT_SPECS.find(function (s) {
+          return s.id === editingLog.specId;
+        }) || MEASUREMENT_SPECS[0];
+      var updatedEntry = {
+        id: String(editingLog.id),
+        timestamp: editingLog.timestamp || formatTimestamp(new Date()),
+        sol: parseInt(editingLog.solText, 10) || missionDay,
+        specId: editingLog.specId || matchedSpec.id,
+        measurementName: editingLog.measurementName || matchedSpec.name,
+        priority: parseInt(editingLog.priorityText, 10) || MEASUREMENT_PRIORITY_MAP[matchedSpec.id] || 1,
+        severity: editingLog.severity === "red" ? "red" : "yellow",
+        isAdditionalCritical: Boolean(editingLog.isAdditionalCritical),
+        triggerValue: String(editingLog.triggerValue || ""),
+        initialTriggerValue: String(editingLog.initialTriggerValue || editingLog.triggerValue || ""),
+        peakValue: String(editingLog.triggerValue || ""),
+        updateCount: Number(editingLog.updateCount || 1),
+        unit: editingLog.unit || matchedSpec.unit,
+        thresholdRule: editingLog.thresholdRule || matchedSpec.threshold,
+        reason: editingLog.reason,
+        countermeasures:
+          editingLog.countermeasures || getCountermeasuresForWarning(matchedSpec.id, editingLog.severity),
+        chartType: matchedSpec.chartType || "line",
+        recentRecords: parsedRecords,
+        recentSecondary: parsedSecondary.length > 0 ? parsedSecondary : null,
+        recentLabels: parsedLabels,
+        concurrentSnapshot: editingLog.concurrentSnapshot,
+        status: editingLog.status || "Under Review",
+        analysisNotes: editingLog.analysisNotes || "",
+        manuallyEdited: true,
+      };
+      setWarningLogs(function (prev) {
+        var exists = prev.some(function (item) {
+          return item.id === updatedEntry.id;
+        });
+        var next = exists
+          ? prev.map(function (item) {
+              return item.id === updatedEntry.id ? updatedEntry : item;
+            })
+          : [updatedEntry].concat(prev);
+        saveStoredWarningLogs(astroKey, next);
+        return next;
+      });
+      setSelectedWlogId(updatedEntry.id);
+      setEditingLog(null);
+    }
+
+    function handleDeleteWarningLog(logId) {
+      if (!logId) return;
+      var targetIdStr = String(logId);
+      if (confirmDeleteTimerRef.current) {
+        window.clearTimeout(confirmDeleteTimerRef.current);
+        confirmDeleteTimerRef.current = null;
+      }
+      setConfirmDeleteWlogId(null);
+      // Clear any active tracking reference pointing to this deleted log
+      Object.keys(lastLoggedLevelRef.current || {}).forEach(function (specKey) {
+        var tr = lastLoggedLevelRef.current[specKey];
+        if (tr && tr.logId === targetIdStr) {
+          tr.logId = null;
+        }
+      });
+      setWarningLogs(function (prev) {
+        var deletedIdx = prev.findIndex(function (item) {
+          return String(item.id) === targetIdStr;
+        });
+        var next = prev.filter(function (item) {
+          return String(item.id) !== targetIdStr;
+        });
+        saveStoredWarningLogs(astroKey, next);
+        if (selectedWlogId === targetIdStr) {
+          var fallbackItem = next[Math.min(deletedIdx, next.length - 1)] || next[0] || null;
+          setSelectedWlogId(fallbackItem ? fallbackItem.id : null);
+        }
+        return next;
+      });
+      if (editingLog && String(editingLog.id) === targetIdStr) {
+        setEditingLog(null);
+      }
+    }
+
+    function requestDeleteWarningLog(logId) {
+      if (!logId) return;
+      var targetIdStr = String(logId);
+      if (String(confirmDeleteWlogId) === targetIdStr) {
+        handleDeleteWarningLog(targetIdStr);
+      } else {
+        setConfirmDeleteWlogId(targetIdStr);
+        if (confirmDeleteTimerRef.current) {
+          window.clearTimeout(confirmDeleteTimerRef.current);
+        }
+        confirmDeleteTimerRef.current = window.setTimeout(function () {
+          setConfirmDeleteWlogId(function (prev) {
+            return String(prev) === targetIdStr ? null : prev;
+          });
+        }, 4500);
+      }
+    }
+
+    function handleResetWarningLogs() {
+      var defaults = buildDefaultWarningLogs(astronaut, slotIndex);
+      setWarningLogs(defaults);
+      saveStoredWarningLogs(astroKey, defaults);
+      if (defaults.length > 0) {
+        setSelectedWlogId(defaults[0].id);
+      }
+    }
+
+    function simulateWarningPreset(specId, severityLevel) {
+      var presetGroup = TEST_WARNING_PRESETS[specId];
+      if (!presetGroup || !presetGroup[severityLevel] || !measurements[specId]) return;
+      var payload = presetGroup[severityLevel];
+      var existing = measurements[specId];
+
+      simLocksRef.current[specId] = true;
+      delete acknowledgedRedsRef.current[specId];
+      setDismissedWarnings(function (prev) {
+        var next = Object.assign({}, prev);
+        delete next[specId];
+        return next;
+      });
+
+      var updatedItem = Object.assign({}, existing, {
+        value: payload.value,
+        series: payload.series ? payload.series.slice() : existing.series,
+        seriesSecondary: payload.seriesSecondary ? payload.seriesSecondary.slice() : existing.seriesSecondary,
+      });
+
+      var isSubsequentRed = Boolean(
+        severityLevel === "red" && initialRedSosSpecRef.current && initialRedSosSpecRef.current !== specId
+      );
+      if (severityLevel === "red" && !initialRedSosSpecRef.current) {
+        initialRedSosSpecRef.current = specId;
+        acknowledgedRedsRef.current.__initialSosAcknowledged = true;
+      }
+
+      var rawDetails = getMeasurementAlertDetails(updatedItem);
+      var effectiveDetails = isSubsequentRed
+        ? {
+            level: "yellow",
+            isAdditionalCritical: true,
+            priority: rawDetails.priority,
+            reason: "Additional critical events occurred: " + rawDetails.reason,
+            instruction: rawDetails.instruction,
+          }
+        : rawDetails;
+
+      latchedWarningsRef.current[specId] = {
+        minHoldUntil: Date.now() + 5000,
+        itemSnapshot: Object.assign({}, updatedItem),
+        details: effectiveDetails,
+        dismissedVal: null,
+        dismissRequested: false,
+      };
+
+      var nextMap = Object.assign({}, measurements);
+      nextMap[specId] = updatedItem;
+      setMeasurements(nextMap);
+
+      if (severityLevel === "red") {
+        setTestModalOpen(false);
+        if (!isSubsequentRed) {
+          setDiagnosticActive(false);
+          setAlertCountdown(20);
+          setAlertActive(true);
+        }
+      }
+    }
+
+    function simulatePriorityWarningStack() {
+      var stackIds = ["radiation_exposure", "pressure", "heart_rate"];
+      var nextMap = Object.assign({}, measurements);
+      var nowMs = Date.now();
+      stackIds.forEach(function (id) {
+        var presetGroup = TEST_WARNING_PRESETS[id];
+        if (presetGroup && presetGroup.yellow && nextMap[id]) {
+          simLocksRef.current[id] = true;
+          var updatedItem = Object.assign({}, nextMap[id], {
+            value: presetGroup.yellow.value,
+            series: presetGroup.yellow.series ? presetGroup.yellow.series.slice() : nextMap[id].series,
+            seriesSecondary: presetGroup.yellow.seriesSecondary
+              ? presetGroup.yellow.seriesSecondary.slice()
+              : nextMap[id].seriesSecondary,
+          });
+          nextMap[id] = updatedItem;
+          latchedWarningsRef.current[id] = {
+            minHoldUntil: nowMs + 5000,
+            itemSnapshot: Object.assign({}, updatedItem),
+            details: getMeasurementAlertDetails(updatedItem),
+            dismissedVal: null,
+            dismissRequested: false,
+          };
+        }
+      });
+      setDismissedWarnings({});
+      setMeasurements(nextMap);
+      setTestModalOpen(false);
+    }
+
+    function simulateCardiacArrestCascade() {
+      if (!measurements || !measurements.heart_rate) return;
+      var nowMs = Date.now();
+      simLocksRef.current.heart_rate = true;
+      delete simLocksRef.current.electrocardiogram;
+      delete simLocksRef.current.pressure;
+      delete simLocksRef.current.oxygen_level_in_blood;
+      delete simLocksRef.current.respiration_rate;
+      delete acknowledgedRedsRef.current.heart_rate;
+      delete acknowledgedRedsRef.current.electrocardiogram;
+
+      // Heart rate (0 bpm) is the initial Red SOS trigger; subsequent Red triggers (ECG flatline, BP drop, SpO2 drop) are recorded as warnings & displayed like Yellow warnings!
+      if (!initialRedSosSpecRef.current) {
+        initialRedSosSpecRef.current = "heart_rate";
+      }
+      acknowledgedRedsRef.current.__initialSosAcknowledged = true;
+      var isHrSubsequentRed = initialRedSosSpecRef.current !== "heart_rate";
+
+      var arrestHrItem = Object.assign({}, measurements.heart_rate, {
+        value: "0",
+        series: [78, 76, 72, 65, 54, 42, 30, 18, 8, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      });
+      var flatEcgItem = measurements.electrocardiogram
+        ? Object.assign({}, measurements.electrocardiogram, {
+            value: "0.01",
+            series: [
+              0.16, -0.15, 1.18, -0.29, 0.25,
+              0.08, -0.06, 0.42, -0.10, 0.06,
+              0.01, 0.00, 0.01, -0.01, 0.00,
+              0.00, 0.01, 0.00, -0.01, 0.01,
+              0.00, 0.00, 0.01, 0.00, 0.01,
+            ],
+          })
+        : null;
+
+      var nextMap = Object.assign({}, measurements);
+      nextMap.heart_rate = arrestHrItem;
+      if (flatEcgItem) {
+        nextMap.electrocardiogram = flatEcgItem;
+      }
+
+      var rawHrDetails = getMeasurementAlertDetails(arrestHrItem);
+      latchedWarningsRef.current.heart_rate = {
+        minHoldUntil: nowMs + 5000,
+        itemSnapshot: Object.assign({}, arrestHrItem),
+        details: isHrSubsequentRed
+          ? {
+              level: "yellow",
+              isAdditionalCritical: true,
+              priority: rawHrDetails.priority,
+              reason: "Additional critical events occurred: " + rawHrDetails.reason,
+              instruction: rawHrDetails.instruction,
+            }
+          : rawHrDetails,
+        dismissedVal: null,
+        dismissRequested: false,
+      };
+      if (flatEcgItem) {
+        var rawEcgDetails = getMeasurementAlertDetails(flatEcgItem);
+        latchedWarningsRef.current.electrocardiogram = {
+          minHoldUntil: nowMs + 5000,
+          itemSnapshot: Object.assign({}, flatEcgItem),
+          details: {
+            level: "yellow",
+            isAdditionalCritical: true,
+            priority: rawEcgDetails.priority,
+            reason: "Additional critical events occurred: " + rawEcgDetails.reason,
+            instruction: rawEcgDetails.instruction,
+          },
+          dismissedVal: null,
+          dismissRequested: false,
+        };
+      }
+
+      setDismissedWarnings({});
+      setMeasurements(nextMap);
+      setTestModalOpen(false);
+      if (!isHrSubsequentRed) {
+        setDiagnosticActive(false);
+        setAlertCountdown(20);
+        setAlertActive(true);
+      }
+    }
+
+    function simulateHighRadiationCascade() {
+      if (!measurements || !measurements.radiation_exposure) return;
+      delete simLocksRef.current.skin_surface;
+      delete simLocksRef.current.temp_inside_costume;
+      delete simLocksRef.current.heart_rate;
+      simulateWarningPreset("radiation_exposure", "yellow");
+      setTestModalOpen(false);
+    }
+
+    function clearAllSimulatedWarnings() {
+      var nowMs = Date.now();
+      simLocksRef.current = {};
+      acknowledgedRedsRef.current = {};
+      initialRedSosSpecRef.current = null;
+      Object.keys(latchedWarningsRef.current).forEach(function (id) {
+        var latch = latchedWarningsRef.current[id];
+        if (latch && nowMs < latch.minHoldUntil) {
+          latch.dismissRequested = true;
+          latch.dismissRequestedVal = String(latch.itemSnapshot ? latch.itemSnapshot.value : "");
+        } else {
+          delete latchedWarningsRef.current[id];
+        }
+      });
+      setDismissedWarnings({});
+      var freshDefaults = buildDefaultMeasurementsForAstronaut(astronaut, slotIndex);
+      setMeasurements(freshDefaults);
+      saveStoredMeasurements(astroKey, freshDefaults);
       setAlertActive(false);
     }
 
@@ -3682,6 +7576,329 @@
 
     function closeDiagnosticScreen() {
       setDiagnosticActive(false);
+    }
+
+    function toggleMeasEditMode() {
+      setMeasEditMode(function (prev) {
+        return !prev;
+      });
+    }
+
+    function handleClickMeasurementCard(specId) {
+      var item = measurements[specId];
+      if (!item) return;
+      setSelectedMeasId(specId);
+      if (measEditMode) {
+        setDraftMeas({
+          id: item.id,
+          name: item.name,
+          value: String(item.value !== undefined && item.value !== null ? item.value : ""),
+          unit: String(item.unit || ""),
+          threshold: String(item.threshold || ""),
+          seriesText: Array.isArray(item.series) ? item.series.join(", ") : "",
+          seriesLabelsText: Array.isArray(item.seriesLabels) ? item.seriesLabels.join(", ") : "",
+        });
+        setMeasModalMode("edit");
+      } else {
+        setMeasModalMode("view");
+      }
+    }
+
+    function syncMeasurementToAstronaut(itemId, newValue) {
+      if (!onUpdateAstronaut || !astronaut) return;
+      var updated = Object.assign({}, astronaut);
+      var baseline = Object.assign({}, updated.medical_baseline || {});
+      var changed = false;
+
+      if (itemId === "full_name") {
+        var split = splitFullName(newValue);
+        updated.first_name = split.firstName;
+        updated.last_name = split.lastName;
+        updated.firstName = split.firstName;
+        updated.lastName = split.lastName;
+        updated.name = newValue;
+        changed = true;
+      } else if (itemId === "date_of_birth") {
+        updated.date_of_birth = newValue;
+        var calcAge = calculateAgeFromDob(newValue);
+        if (calcAge !== "") updated.age = calcAge;
+        changed = true;
+      } else if (itemId === "sex") {
+        updated.sex = newValue;
+        updated.gender = newValue;
+        changed = true;
+      } else if (itemId === "crew_role") {
+        updated.crew_role = newValue;
+        changed = true;
+      } else if (itemId === "standing_height") {
+        var sh = parseFloat(newValue);
+        if (Number.isFinite(sh) && sh > 0) {
+          updated.standing_height_cm = sh;
+          updated.heightCm = sh;
+          changed = true;
+        }
+      } else if (itemId === "sitting_height") {
+        var sith = parseFloat(newValue);
+        if (Number.isFinite(sith) && sith > 0) {
+          updated.sitting_height_cm = sith;
+          updated.sittingHeightCm = sith;
+          changed = true;
+        }
+      } else if (itemId === "blood_type") {
+        updated.bloodType = newValue;
+        baseline.blood_type = newValue;
+        updated.medical_baseline = baseline;
+        changed = true;
+      } else if (itemId === "bone_material_normal_density") {
+        var bmd = parseFloat(newValue);
+        if (Number.isFinite(bmd) && bmd > 0) {
+          baseline.bone_material_normal_density_g_cm2 = bmd;
+          updated.medical_baseline = baseline;
+          changed = true;
+        }
+      } else if (itemId === "base_heart_rating" || itemId === "heart_rate") {
+        var hrNum = parseInt(newValue, 10);
+        if (Number.isFinite(hrNum) && hrNum > 0) {
+          baseline.base_heart_rating_bpm = hrNum;
+          updated.medical_baseline = baseline;
+          changed = true;
+        }
+      } else if (itemId === "base_blood_pressure" || itemId === "pressure") {
+        baseline.base_blood_pressure = newValue;
+        updated.medical_baseline = baseline;
+        changed = true;
+      } else if (itemId === "base_ecg_results") {
+        baseline.base_ecg_results = newValue;
+        updated.medical_baseline = baseline;
+        changed = true;
+      } else if (itemId === "max_oxygen_capacity_in_blood") {
+        var vo2 = parseFloat(newValue);
+        if (Number.isFinite(vo2) && vo2 > 0) {
+          baseline.max_oxygen_capacity_ml_kg_min = vo2;
+          updated.medical_baseline = baseline;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        onUpdateAstronaut(updated);
+      }
+    }
+
+    function handleSaveMeasurementModal(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      if (!draftMeas || !draftMeas.id) return;
+      var targetId = draftMeas.id;
+      var existing = measurements[targetId];
+      if (!existing) return;
+
+      var parsedSeries = existing.series;
+      var parsedSecondary = existing.seriesSecondary;
+      if (existing.chartType === "line" || existing.chartType === "column") {
+        var nums = String(draftMeas.seriesText || "")
+          .split(",")
+          .map(function (s) {
+            return parseFloat(s.trim());
+          })
+          .filter(function (n) {
+            return Number.isFinite(n);
+          });
+        if (nums.length > 0) {
+          var numericMain = parseFloat(draftMeas.value);
+          if (
+            Number.isFinite(numericMain) &&
+            String(draftMeas.seriesText || "").trim() === (Array.isArray(existing.series) ? existing.series.join(", ") : "")
+          ) {
+            parsedSeries = nums.concat([numericMain]).slice(-20);
+          } else {
+            parsedSeries = nums;
+          }
+        }
+        if (targetId === "pressure" && String(draftMeas.value || "").indexOf("/") !== -1) {
+          var diaEdit = parseFloat(String(draftMeas.value).split("/")[1]);
+          if (Number.isFinite(diaEdit) && Array.isArray(existing.seriesSecondary)) {
+            parsedSecondary = existing.seriesSecondary.concat([diaEdit]).slice(-20);
+          }
+        }
+      }
+
+      var parsedLabels = existing.seriesLabels;
+      if ((existing.chartType === "line" || existing.chartType === "column") && draftMeas.seriesLabelsText) {
+        var lbls = String(draftMeas.seriesLabelsText)
+          .split(",")
+          .map(function (s) {
+            return s.trim();
+          })
+          .filter(Boolean);
+        if (lbls.length > 0) {
+          parsedLabels = lbls;
+        }
+      }
+
+      var updatedItem = Object.assign({}, existing, {
+        value: draftMeas.value,
+        unit: draftMeas.unit || existing.unit,
+        threshold: draftMeas.threshold || existing.threshold,
+        series: parsedSeries,
+        seriesSecondary: parsedSecondary,
+        seriesLabels: parsedLabels,
+      });
+
+      simLocksRef.current[targetId] = true;
+      delete acknowledgedRedsRef.current[targetId];
+      setDismissedWarnings(function (prev) {
+        var next = Object.assign({}, prev);
+        delete next[targetId];
+        return next;
+      });
+
+      var newDetails = getMeasurementAlertDetails(updatedItem);
+      if (newDetails.level === "red" && !initialRedSosSpecRef.current) {
+        initialRedSosSpecRef.current = targetId;
+      }
+      var isSubsequentManualRed = Boolean(
+        newDetails.level === "red" && initialRedSosSpecRef.current && initialRedSosSpecRef.current !== targetId
+      );
+      var effectiveManualDetails = isSubsequentManualRed
+        ? {
+            level: "yellow",
+            isAdditionalCritical: true,
+            priority: newDetails.priority,
+            reason: "Additional critical events occurred: " + newDetails.reason,
+            instruction: newDetails.instruction,
+          }
+        : newDetails;
+
+      if (effectiveManualDetails.level === "yellow" || effectiveManualDetails.level === "red") {
+        latchedWarningsRef.current[targetId] = {
+          minHoldUntil: Date.now() + 5000,
+          itemSnapshot: Object.assign({}, updatedItem),
+          details: effectiveManualDetails,
+          dismissedVal: null,
+          dismissRequested: false,
+        };
+      }
+
+      var nextMap = Object.assign({}, measurements);
+      nextMap[targetId] = updatedItem;
+      setMeasurements(nextMap);
+      saveStoredMeasurements(astroKey, nextMap);
+      syncMeasurementToAstronaut(targetId, draftMeas.value);
+      setMeasModalMode(null);
+    }
+
+    function handleResetSingleMeasurement(specId) {
+      var defaults = buildDefaultMeasurementsForAstronaut(astronaut, slotIndex);
+      var defItem = defaults[specId];
+      if (!defItem) return;
+      delete simLocksRef.current[specId];
+      delete acknowledgedRedsRef.current[specId];
+      if (initialRedSosSpecRef.current === specId) {
+        initialRedSosSpecRef.current = null;
+        delete acknowledgedRedsRef.current.__initialSosAcknowledged;
+      }
+      var nowMs = Date.now();
+      var latch = latchedWarningsRef.current[specId];
+      if (latch && nowMs < latch.minHoldUntil) {
+        latch.dismissRequested = true;
+        latch.dismissRequestedVal = String(defItem.value);
+      } else {
+        delete latchedWarningsRef.current[specId];
+      }
+      setDismissedWarnings(function (prev) {
+        var next = Object.assign({}, prev);
+        delete next[specId];
+        return next;
+      });
+      var nextMap = Object.assign({}, measurements);
+      nextMap[specId] = defItem;
+      // If no other primary test locks remain active, also restore unlocked interconnected dynamic measurements back to nominal
+      if (Object.keys(simLocksRef.current).length === 0) {
+        initialRedSosSpecRef.current = null;
+        acknowledgedRedsRef.current = {};
+        Object.keys(defaults).forEach(function (k) {
+          if (defaults[k] && defaults[k].chartType !== "const" && !simLocksRef.current[k]) {
+            nextMap[k] = defaults[k];
+          }
+        });
+      }
+      setMeasurements(nextMap);
+      saveStoredMeasurements(astroKey, nextMap);
+      setDraftMeas({
+        id: defItem.id,
+        name: defItem.name,
+        value: String(defItem.value),
+        unit: String(defItem.unit || ""),
+        threshold: String(defItem.threshold || ""),
+        seriesText: Array.isArray(defItem.series) ? defItem.series.join(", ") : "",
+        seriesLabelsText: Array.isArray(defItem.seriesLabels) ? defItem.seriesLabels.join(", ") : "",
+      });
+    }
+
+    var activeYellowWarnings = [];
+    var activeRedAlerts = [];
+    var renderNowMs = Date.now();
+    if (measurements) {
+      MEASUREMENT_SPECS.forEach(function (spec) {
+        var item = measurements[spec.id];
+        if (!item) return;
+        var rawDetails = getMeasurementAlertDetails(item);
+        var latch = latchedWarningsRef.current[spec.id];
+        var isHeld5s = Boolean(latch && renderNowMs < latch.minHoldUntil && !latch.dismissed);
+        var holdRemainingSec = isHeld5s ? Math.max(0.1, (latch.minHoldUntil - renderNowMs) / 1000).toFixed(1) : null;
+
+        if (rawDetails.level === "red") {
+          var isAdditionalRed = Boolean(
+            initialRedSosSpecRef.current && initialRedSosSpecRef.current !== spec.id
+          );
+          if (!isAdditionalRed) {
+            activeRedAlerts.push({ item: item, details: rawDetails });
+          } else if (isHeld5s) {
+            // Subsequent Red triggers after the initial Red warning are displayed like Yellow warnings stating "Additional critical events occurred" and auto-disappear after 5s
+            var addlDetails = {
+              level: "yellow",
+              isAdditionalCritical: true,
+              priority: rawDetails.priority,
+              reason: "Additional critical events occurred: " + rawDetails.reason,
+              instruction: rawDetails.instruction,
+              countermeasures: getCountermeasuresForWarning(spec.id, "red", rawDetails.instruction),
+            };
+            activeYellowWarnings.push({
+              item: item,
+              details: addlDetails,
+              isHeld5s: true,
+              holdRemainingSec: holdRemainingSec,
+              dismissPending: false,
+            });
+          }
+        } else if (rawDetails.level === "yellow") {
+          if (isHeld5s) {
+            activeYellowWarnings.push({
+              item: item,
+              details: rawDetails,
+              isHeld5s: true,
+              holdRemainingSec: holdRemainingSec,
+              dismissPending: false,
+            });
+          }
+        } else if (isHeld5s && latch && latch.details) {
+          // Value returned to normal before 5 seconds elapsed — hold warning active until 5s expires
+          var heldItem = latch.itemSnapshot || item;
+          activeYellowWarnings.push({
+            item: heldItem,
+            details: latch.details,
+            isHeld5s: true,
+            holdRemainingSec: holdRemainingSec,
+            dismissPending: false,
+          });
+        }
+      });
+      activeYellowWarnings.sort(function (a, b) {
+        return a.details.priority - b.details.priority;
+      });
+      activeRedAlerts.sort(function (a, b) {
+        return a.details.priority - b.details.priority;
+      });
     }
 
     function refreshHistory() {
@@ -3865,6 +8082,8 @@
 
     var tabs = [
       { id: "dashboard", label: "Dashboard" },
+      { id: "measurements", label: "Measurements" },
+      { id: "warning-log", label: "Warning Log (" + warningLogs.length + ")" },
       { id: "health-plan", label: "Health Plan" },
       { id: "ground-control", label: "Ground Control" },
     ];
@@ -3895,7 +8114,7 @@
                 className: isActive ? "dash-nav-tab dash-nav-tab--active" : "dash-nav-tab",
                 onClick: function () {
                   setActiveTab(tab.id);
-                  setAlertActive(false);
+                  closeAlertScreen();
                   setDiagnosticActive(false);
                 },
               },
@@ -3917,7 +8136,7 @@
                 "aria-label": "Mode",
                 value: envMode,
                 onChange: function (e) {
-                  setEnvMode(e.target.value);
+                  handleSelectEnvMode(e.target.value);
                 },
               },
               h("option", { value: "spaceship" }, "Spaceship"),
@@ -3931,6 +8150,129 @@
           )
         )
       ),
+      activeYellowWarnings.length > 0
+        ? h(
+            "aside",
+            {
+              className: "dash-warning-stack",
+              "aria-label": "Priority Warning Notifications",
+            },
+            activeYellowWarnings.map(function (entry) {
+              var wItem = entry.item;
+              var wDetails = entry.details;
+              var unitSuffix =
+                wItem.unit &&
+                wItem.unit !== "N/A" &&
+                String(wItem.value).indexOf(wItem.unit.split(" ")[0]) === -1
+                  ? " " + wItem.unit
+                  : "";
+              var fullValText = String(wItem.value) + unitSuffix;
+              return h(
+                "div",
+                {
+                  key: wItem.id,
+                  className: "dash-warning-toast",
+                  role: "alert",
+                },
+                h(
+                  "div",
+                  { className: "dash-warning-toast-top" },
+                  h(
+                    "div",
+                    { className: "dash-warning-toast-badges" },
+                    h(
+                      "span",
+                      { className: "dash-warning-priority-pill" },
+                      "PRIORITY #" + wDetails.priority
+                    ),
+                    h(
+                      "span",
+                      { className: "dash-warning-title" },
+                      wDetails.isAdditionalCritical
+                        ? "⚠ ADDITIONAL CRITICAL EVENT OCCURRED"
+                        : "⚠ CONCERNING CHANGE DETECTED"
+                    ),
+                    entry.isHeld5s
+                      ? h(
+                          "span",
+                          { className: "dash-warning-hold-pill" },
+                          entry.dismissPending
+                            ? "5s HOLD (" + entry.holdRemainingSec + "s)"
+                            : "MIN 5s (" + entry.holdRemainingSec + "s)"
+                        )
+                      : null
+                  ),
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className: "dash-warning-dismiss",
+                      "aria-label": "Dismiss warning for " + wItem.name,
+                      title: entry.isHeld5s
+                        ? "Warning stays active for at least 5 seconds (" + entry.holdRemainingSec + "s left)"
+                        : "Dismiss warning",
+                      onClick: function () {
+                        dismissWarningItem(wItem.id, wItem.value);
+                      },
+                    },
+                    "×"
+                  )
+                ),
+                wDetails.isAdditionalCritical
+                  ? h(
+                      "div",
+                      { className: "dash-warning-toast-msg" },
+                      h("strong", null, "Additional critical events occurred: "),
+                      "Critical change detected in ",
+                      h("strong", null, wItem.name),
+                      " (",
+                      h("strong", null, fullValText),
+                      "). ",
+                      String(wDetails.reason || "").replace(
+                        /^Additional critical events occurred:\s*/i,
+                        ""
+                      )
+                    )
+                  : h(
+                      "div",
+                      { className: "dash-warning-toast-msg" },
+                      "A concerning level of change has been detected in ",
+                      h("strong", null, wItem.name),
+                      " (",
+                      h("strong", null, fullValText),
+                      "). ",
+                      wDetails.reason
+                    ),
+                h(
+                  "div",
+                  { className: "dash-warning-toast-actions" },
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className: "dash-warning-open-btn",
+                      onClick: function () {
+                        openMeasurementFromWarning(wItem.id);
+                      },
+                    },
+                    "OPEN " + wItem.name.toUpperCase()
+                  ),
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className: "dash-warning-log-btn",
+                      onClick: function () {
+                        openWarningLogForMeasurement(wItem.id);
+                      },
+                    },
+                    "VIEW IN LOG"
+                  )
+                )
+              );
+            })
+          )
+        : null,
       h(
         "div",
         { className: alertActive ? "dash-workspace dash-workspace--alert" : "dash-workspace" },
@@ -3969,7 +8311,12 @@
                     fill: "#ffffff",
                   })
                 ),
-                h("h1", { className: "dash-alert-title" }, "HEALTH ALERT!")
+                h("h1", { className: "dash-alert-title" }, "SOS EMERGENCY ALERT!"),
+                h(
+                  "p",
+                  { className: "dash-alert-source-note" },
+                  "SIMULATED SENSOR ALERT — confirm clinical status using the Onboard Health Link."
+                )
               ),
               h(
                 "div",
@@ -3980,33 +8327,81 @@
                   h(
                     "div",
                     { className: "dash-alert-section" },
-                    h("h2", { className: "dash-alert-subtitle" }, "CRITICAL VITALS DETECTED"),
+                    h(
+                      "h2",
+                      { className: "dash-alert-subtitle" },
+                      activeRedAlerts.length > 0
+                        ? "DANGEROUS / CRITICAL PARAMETER BREACH DETECTED (" + activeRedAlerts.length + ")"
+                        : "CRITICAL VITALS DETECTED"
+                    ),
                     h(
                       "div",
                       { className: "dash-alert-vitals-list" },
-                      sample.alertData.badVitals.map(function (item, idx) {
-                        return h(
-                          "div",
-                          { key: idx, className: "dash-alert-vital-line" },
-                          item.label + ": " + item.value + " (" + item.detail + ")"
-                        );
-                      })
+                      activeRedAlerts.length > 0
+                        ? activeRedAlerts.map(function (entry) {
+                            var rItem = entry.item;
+                            var rDetails = entry.details;
+                            var rUnitSuffix =
+                              rItem.unit &&
+                              rItem.unit !== "N/A" &&
+                              String(rItem.value).indexOf(rItem.unit.split(" ")[0]) === -1
+                                ? " " + rItem.unit
+                                : "";
+                            return h(
+                              "div",
+                              { key: rItem.id, className: "dash-alert-vital-line" },
+                              h(
+                                "div",
+                                { style: { fontWeight: "800" } },
+                                rItem.name.toUpperCase() +
+                                  ": " +
+                                  String(rItem.value) +
+                                  rUnitSuffix +
+                                  " [Priority #" +
+                                  rDetails.priority +
+                                  "]"
+                              ),
+                              h(
+                                "div",
+                                { style: { fontSize: "0.92em", opacity: 0.95, marginTop: "0.18rem" } },
+                                "Exact Cause: " +
+                                  rDetails.reason +
+                                  " | Trigger Rule: " +
+                                  rItem.threshold
+                              )
+                            );
+                          })
+                        : sample.alertData.badVitals.map(function (item, idx) {
+                            return h(
+                              "div",
+                              { key: idx, className: "dash-alert-vital-line" },
+                              item.label + ": " + item.value + " (" + item.detail + ")"
+                            );
+                          })
                     )
                   ),
                   h(
                     "div",
                     { className: "dash-alert-section" },
-                    h("h2", { className: "dash-alert-subtitle" }, "EMERGENCY INSTRUCTIONS"),
+                    h("h2", { className: "dash-alert-subtitle" }, "EXACT EMERGENCY INSTRUCTIONS & PROTOCOL"),
                     h(
                       "div",
                       { className: "dash-alert-instructions" },
-                      sample.alertData.instructions.map(function (line, idx) {
-                        return h(
-                          "p",
-                          { key: idx, className: "dash-alert-instruction-line" },
-                          line
-                        );
-                      })
+                      activeRedAlerts.length > 0
+                        ? activeRedAlerts.map(function (entry, idx) {
+                            return h(
+                              "p",
+                              { key: entry.item.id, className: "dash-alert-instruction-line" },
+                              idx + 1 + ". [" + entry.item.name + "] " + entry.details.instruction
+                            );
+                          })
+                        : sample.alertData.instructions.map(function (line, idx) {
+                            return h(
+                              "p",
+                              { key: idx, className: "dash-alert-instruction-line" },
+                              line
+                            );
+                          })
                     )
                   )
                 ),
@@ -4550,13 +8945,65 @@
                     h(
                       "div",
                       { className: "dash-ship-metrics" },
-                      h("h2", { className: "dash-box-heading" }, "Spaceship Status"),
-                      h("div", { className: "dash-stat-line" }, "Temperature: " + sample.spaceship.temperature),
-                      h("div", { className: "dash-stat-line" }, "CO2 level: " + sample.spaceship.co2Level),
-                      h("div", { className: "dash-stat-line" }, "Radiation Level: " + sample.spaceship.radiationLevel),
-                      h("div", { className: "dash-stat-line" }, "Inner Pressure: " + sample.spaceship.innerPressure),
-                      h("div", { className: "dash-stat-line" }, "Upper Pressure: " + sample.spaceship.upperPressure),
-                      h("div", { className: "dash-stat-line" }, "Lower Pressure: " + sample.spaceship.lowerPressure)
+                      h(
+                        "h2",
+                        { className: "dash-box-heading" },
+                        envMode === "outer-space" ? "Outer Space (EVA) Status" : "Spaceship Status"
+                      ),
+                      h(
+                        "div",
+                        { className: "dash-stat-line" },
+                        "Outside Temp: " +
+                          (measurements && measurements.outside_temperature
+                            ? measurements.outside_temperature.value + " °C"
+                            : envMode === "outer-space"
+                            ? "-270.4 °C"
+                            : sample.spaceship.temperature)
+                      ),
+                      h(
+                        "div",
+                        { className: "dash-stat-line" },
+                        "Suit Temp: " +
+                          (measurements && measurements.temp_inside_costume
+                            ? measurements.temp_inside_costume.value + " °C"
+                            : envMode === "outer-space"
+                            ? "19.8 °C"
+                            : "21.6 °C")
+                      ),
+                      h(
+                        "div",
+                        { className: "dash-stat-line" },
+                        "CO2 level: " +
+                          (measurements && measurements.co2_level
+                            ? measurements.co2_level.value
+                            : sample.spaceship.co2Level)
+                      ),
+                      h(
+                        "div",
+                        { className: "dash-stat-line" },
+                        "Radiation Level: " +
+                          (measurements && measurements.radiation_exposure
+                            ? measurements.radiation_exposure.value + " R/sol"
+                            : sample.spaceship.radiationLevel)
+                      ),
+                      h(
+                        "div",
+                        { className: "dash-stat-line" },
+                        "Inner Pressure: " +
+                          (envMode === "outer-space" ? "29.6 kPa (4.3 psi)" : sample.spaceship.innerPressure)
+                      ),
+                      h(
+                        "div",
+                        { className: "dash-stat-line" },
+                        "Upper Pressure: " +
+                          (envMode === "outer-space" ? "30.1 kPa" : sample.spaceship.upperPressure)
+                      ),
+                      h(
+                        "div",
+                        { className: "dash-stat-line" },
+                        "Lower Pressure: " +
+                          (envMode === "outer-space" ? "29.1 kPa" : sample.spaceship.lowerPressure)
+                      )
                     ),
                     h(
                       "div",
@@ -4845,6 +9292,894 @@
                 )
               )
             )
+          : activeTab === "measurements"
+          ? h(
+              "main",
+              { className: "dash-measurements" },
+              h(
+                "section",
+                {
+                  className: measEditMode
+                    ? "meas-toolbar meas-toolbar--orange"
+                    : "meas-toolbar",
+                },
+                h(
+                  "div",
+                  { className: "meas-toolbar-top" },
+                  h(
+                    "div",
+                    { className: "meas-toolbar-title-group" },
+                    h("h1", { className: "meas-title" }, "ASTRONAUT MEASUREMENTS & TELEMETRY DATA POINTS"),
+                    h(
+                      "span",
+                      {
+                        className: measEditMode
+                          ? "meas-mode-badge meas-mode-badge--orange"
+                          : "meas-mode-badge meas-mode-badge--blue",
+                      },
+                      measEditMode
+                        ? "EDIT MODE ACTIVE — Click any data point below to edit its data"
+                        : "VIEW MODE — Click any data point below to display its data"
+                    )
+                  )
+                ),
+                h(
+                  "div",
+                  { className: "meas-toolbar-filters" },
+                  h(
+                    "div",
+                    { className: "meas-cat-pills", role: "tablist", "aria-label": "Measurement Categories" },
+                    [
+                      { id: "all", label: "ALL (" + MEASUREMENT_SPECS.length + ")" },
+                      {
+                        id: "vitals",
+                        label:
+                          "VITALS & BIOMETRICS (" +
+                          MEASUREMENT_SPECS.filter(function (s) {
+                            return s.category === "vitals";
+                          }).length +
+                          ")",
+                      },
+                      {
+                        id: "suit_cabin",
+                        label:
+                          "SUIT & CABIN (" +
+                          MEASUREMENT_SPECS.filter(function (s) {
+                            return s.category === "suit_cabin";
+                          }).length +
+                          ")",
+                      },
+                      {
+                        id: "daily",
+                        label:
+                          "PER-SOL LOGS (" +
+                          MEASUREMENT_SPECS.filter(function (s) {
+                            return s.category === "daily";
+                          }).length +
+                          ")",
+                      },
+                      {
+                        id: "baseline",
+                        label:
+                          "CONSTANTS & BASELINES (" +
+                          MEASUREMENT_SPECS.filter(function (s) {
+                            return s.category === "baseline";
+                          }).length +
+                          ")",
+                      },
+                    ].map(function (cat) {
+                      var active = measCategory === cat.id;
+                      return h(
+                        "button",
+                        {
+                          key: cat.id,
+                          type: "button",
+                          className: active ? "meas-cat-pill meas-cat-pill--active" : "meas-cat-pill",
+                          onClick: function () {
+                            setMeasCategory(cat.id);
+                          },
+                        },
+                        cat.label
+                      );
+                    })
+                  ),
+                  h("input", {
+                    type: "search",
+                    className: "meas-search-input",
+                    placeholder: "Filter data points by name, unit, or representation...",
+                    "aria-label": "Filter measurements",
+                    value: measSearch,
+                    onChange: function (e) {
+                      setMeasSearch(e.target.value);
+                    },
+                  })
+                )
+              ),
+              h(
+                "section",
+                { className: "meas-source-panel", "aria-label": "Measurement data sources" },
+                h(
+                  "div",
+                  null,
+                  h("strong", null, "SIMULATED TELEMETRY"),
+                  " — catalogue trends and warning simulations are illustrative, not clinical readings. Profile constants use crew data when available; missing fields use example placeholders."
+                ),
+                h(
+                  "div",
+                  null,
+                  "Latest API record: ",
+                  latestApiRecord
+                    ? "HR " +
+                      (latestApiVitals.heart_rate !== undefined ? latestApiVitals.heart_rate : "—") +
+                      " bpm · BP " +
+                      (latestApiVitals.blood_pressure || "—") +
+                      " · " +
+                      (latestApiRecord.timestamp || "recorded")
+                    : "No recorded vitals returned by the API."
+                ),
+                h(
+                  "div",
+                  null,
+                  "Crew profile baseline: HR ",
+                  apiProfileBaseline.base_heart_rating_bpm !== undefined
+                    ? apiProfileBaseline.base_heart_rating_bpm
+                    : "—",
+                  " bpm · BP ",
+                  apiProfileBaseline.base_blood_pressure || "—",
+                  " · Blood type ",
+                  apiProfileBaseline.blood_type || "—"
+                ),
+                h(
+                  "div",
+                  null,
+                  "Current vitals form draft (not yet submitted): HR ",
+                  vitalsForm.heart_rate,
+                  " bpm · BP ",
+                  vitalsForm.blood_pressure,
+                  " · Sleep ",
+                  vitalsForm.sleep_hours,
+                  " h"
+                )
+              ),
+              h(
+                "section",
+                { className: "meas-grid", "aria-label": "Measurements Data Points" },
+                MEASUREMENT_SPECS.filter(function (spec) {
+                  if (measCategory !== "all" && spec.category !== measCategory) return false;
+                  if (!measSearch.trim()) return true;
+                  var q = measSearch.trim().toLowerCase();
+                  var item = measurements[spec.id] || spec;
+                  return (
+                    spec.name.toLowerCase().indexOf(q) !== -1 ||
+                    spec.dataType.toLowerCase().indexOf(q) !== -1 ||
+                    spec.unit.toLowerCase().indexOf(q) !== -1 ||
+                    spec.representation.toLowerCase().indexOf(q) !== -1 ||
+                    String(item.value || "").toLowerCase().indexOf(q) !== -1
+                  );
+                }).map(function (spec) {
+                  var item = measurements[spec.id] || spec;
+                  var isSelected = selectedMeasId === spec.id;
+                  var alertLevel = getEffectiveMeasurementAlertLevel(item);
+                  var colorClass =
+                    alertLevel === "red"
+                      ? "meas-card--red"
+                      : alertLevel === "yellow"
+                      ? "meas-card--yellow"
+                      : measEditMode
+                      ? "meas-card--orange"
+                      : "meas-card--blue";
+                  var cardClasses = ["meas-card", colorClass];
+                  if (isSelected) cardClasses.push("meas-card--selected");
+                  var unitSuffix =
+                    item.unit && item.unit !== "N/A" && String(item.value).indexOf(item.unit.split(" ")[0]) === -1
+                      ? " " + item.unit
+                      : "";
+
+                  return h(
+                    "button",
+                    {
+                      key: spec.id,
+                      type: "button",
+                      className: cardClasses.join(" "),
+                      onClick: function () {
+                        handleClickMeasurementCard(spec.id);
+                      },
+                    },
+                    h(
+                      "div",
+                      { className: "meas-card-top" },
+                      h("span", { className: "meas-card-index" }, "#" + (MEASUREMENT_SPECS.indexOf(spec) + 1)),
+                      h("span", { className: "meas-card-rep-badge" }, item.representation)
+                    ),
+                    h("h3", { className: "meas-card-title" }, item.name),
+                    h(
+                      "span",
+                      { className: "meas-card-source" },
+                      item.source || "SIMULATED TELEMETRY"
+                    ),
+                    h(
+                      "div",
+                      { className: "meas-card-value-wrap" },
+                      h("span", { className: "meas-card-value" }, String(item.value) + unitSuffix)
+                    ),
+                    item.chartType === "line" && Array.isArray(item.series)
+                      ? h(
+                          "div",
+                          { className: "meas-card-mini-chart" },
+                          h(MeasurementLineChartSvg, {
+                            series: item.series,
+                            seriesSecondary: item.seriesSecondary,
+                            labels: item.seriesLabels,
+                            unit: item.unit,
+                            mini: true,
+                            isOrange: measEditMode,
+                            alertLevel: alertLevel,
+                          })
+                        )
+                      : item.chartType === "column" && Array.isArray(item.series)
+                      ? h(
+                          "div",
+                          { className: "meas-card-mini-chart" },
+                          h(MeasurementColumnChartSvg, {
+                            series: item.series,
+                            labels: item.seriesLabels,
+                            unit: item.unit,
+                            mini: true,
+                            isOrange: measEditMode,
+                            alertLevel: alertLevel,
+                          })
+                        )
+                      : null,
+                    measEditMode
+                      ? h(
+                          React.Fragment,
+                          null,
+                          h(
+                            "div",
+                            { className: "meas-card-meta" },
+                            h("span", null, "Type: " + item.dataType),
+                            h("span", null, "Unit: " + item.unit)
+                          ),
+                          h(
+                            "div",
+                            { className: "meas-card-threshold" },
+                            "Trigger: " + item.threshold
+                          )
+                        )
+                      : null,
+                    h(
+                      "div",
+                      { className: "meas-card-action-hint" },
+                      measEditMode ? "✎ Click to Edit Data Point" : "Click to Display Data"
+                    )
+                  );
+                })
+              )
+            )
+          : activeTab === "warning-log"
+          ? (function () {
+              var filteredLogs = warningLogs.filter(function (entry) {
+                if (wlogFilter !== "all" && entry.severity !== wlogFilter) return false;
+                if (!wlogSearch.trim()) return true;
+                var q = wlogSearch.trim().toLowerCase();
+                return (
+                  String(entry.measurementName || "").toLowerCase().indexOf(q) !== -1 ||
+                  String(entry.reason || "").toLowerCase().indexOf(q) !== -1 ||
+                  String(entry.analysisNotes || "").toLowerCase().indexOf(q) !== -1 ||
+                  String(entry.status || "").toLowerCase().indexOf(q) !== -1 ||
+                  String(entry.triggerValue || "").toLowerCase().indexOf(q) !== -1 ||
+                  String(entry.unit || "").toLowerCase().indexOf(q) !== -1
+                );
+              });
+              var yellowCount = warningLogs.filter(function (e) {
+                return e.severity === "yellow";
+              }).length;
+              var redCount = warningLogs.filter(function (e) {
+                return e.severity === "red";
+              }).length;
+
+              var selectedIdx = filteredLogs.findIndex(function (e) {
+                return e.id === selectedWlogId;
+              });
+              if (selectedIdx === -1 && filteredLogs.length > 0) {
+                selectedIdx = 0;
+              }
+              var activeLog = selectedIdx >= 0 ? filteredLogs[selectedIdx] : null;
+
+              function goPrevLog() {
+                if (filteredLogs.length === 0) return;
+                var nextIdx = selectedIdx > 0 ? selectedIdx - 1 : filteredLogs.length - 1;
+                setSelectedWlogId(filteredLogs[nextIdx].id);
+              }
+
+              function goNextLog() {
+                if (filteredLogs.length === 0) return;
+                var nextIdx = selectedIdx < filteredLogs.length - 1 ? selectedIdx + 1 : 0;
+                setSelectedWlogId(filteredLogs[nextIdx].id);
+              }
+
+              return h(
+                "main",
+                { className: "dash-measurements wlog-main" },
+                h(
+                  "section",
+                  {
+                    className: wlogEditMode
+                      ? "meas-toolbar meas-toolbar--orange"
+                      : "meas-toolbar",
+                  },
+                  h(
+                    "div",
+                    { className: "meas-toolbar-top" },
+                    h(
+                      "div",
+                      { className: "meas-toolbar-title-group" },
+                      h(
+                        "h1",
+                        { className: "meas-title" },
+                        "WARNING & ANOMALY TELEMETRY LOG — SIMULATED SAMPLE DATA & ANALYSIS"
+                      ),
+                      h(
+                        "span",
+                        {
+                          className: wlogEditMode
+                            ? "meas-mode-badge meas-mode-badge--orange"
+                            : "meas-mode-badge meas-mode-badge--blue",
+                        },
+                        wlogEditMode
+                          ? "EDIT MODE ACTIVE — Click any warning record on the left or click Edit to modify its telemetry records & notes"
+                          : "VIEW MODE — Select any warning record on the left (or use Prev / Next) to inspect surrounding telemetry records"
+                      )
+                    ),
+                    h(
+                      "div",
+                      { className: "wlog-toolbar-actions" },
+                      h(
+                        "button",
+                        {
+                          type: "button",
+                          className: "wlog-top-btn",
+                          onClick: handleResetWarningLogs,
+                        },
+                        "↺ Reset Sample Logs"
+                      )
+                    )
+                  ),
+                  h(
+                    "div",
+                    { className: "meas-toolbar-filters" },
+                    h(
+                      "div",
+                      { className: "meas-cat-pills", role: "tablist", "aria-label": "Warning Severity Filter" },
+                      [
+                        { id: "all", label: "ALL LOGS (" + warningLogs.length + ")" },
+                        { id: "yellow", label: "⚠ YELLOW WARNINGS (" + yellowCount + ")" },
+                        { id: "red", label: "🚨 RED SOS ALERTS (" + redCount + ")" },
+                      ].map(function (flt) {
+                        var active = wlogFilter === flt.id;
+                        return h(
+                          "button",
+                          {
+                            key: flt.id,
+                            type: "button",
+                            className: active ? "meas-cat-pill meas-cat-pill--active" : "meas-cat-pill",
+                            onClick: function () {
+                              setWlogFilter(flt.id);
+                            },
+                          },
+                          flt.label
+                        );
+                      })
+                    ),
+                    h("input", {
+                      type: "search",
+                      className: "meas-search-input",
+                      placeholder: "Search warning logs by parameter, reason, status, or analysis notes...",
+                      "aria-label": "Search warning logs",
+                      value: wlogSearch,
+                      onChange: function (e) {
+                        setWlogSearch(e.target.value);
+                      },
+                    })
+                  )
+                ),
+                filteredLogs.length === 0
+                  ? h(
+                      "div",
+                      { className: "dash-box wlog-empty-box" },
+                      h("h2", { className: "dash-box-heading" }, "No Warning Log Entries Match Current Filter"),
+                      h(
+                        "p",
+                        { className: "muted-subtext" },
+                        "Trigger a warning using TEST WARNINGS to automatically record telemetry events for analysis."
+                      )
+                    )
+                  : h(
+                      "section",
+                      { className: "wlog-split-layout", "aria-label": "Warning Log Navigator and Inspector" },
+                      h(
+                        "aside",
+                        { className: "wlog-sidebar", "aria-label": "Warning Log List Navigation" },
+                        h(
+                          "div",
+                          { className: "wlog-sidebar-header" },
+                          h(
+                            "span",
+                            { className: "wlog-sidebar-count" },
+                            "LOG " + (selectedIdx + 1) + " OF " + filteredLogs.length
+                          ),
+                          h(
+                            "div",
+                            { className: "wlog-nav-stepper" },
+                            h(
+                              "button",
+                              {
+                                type: "button",
+                                className: "wlog-step-btn",
+                                onClick: goPrevLog,
+                                disabled: filteredLogs.length <= 1,
+                                "aria-label": "Previous warning log",
+                              },
+                              "◀ PREV"
+                            ),
+                            h(
+                              "button",
+                              {
+                                type: "button",
+                                className: "wlog-step-btn",
+                                onClick: goNextLog,
+                                disabled: filteredLogs.length <= 1,
+                                "aria-label": "Next warning log",
+                              },
+                              "NEXT ▶"
+                            )
+                          )
+                        ),
+                        h(
+                          "div",
+                          { className: "wlog-sidebar-list", role: "listbox", "aria-label": "Recorded Warnings" },
+                          filteredLogs.map(function (entry, idx) {
+                            var isSelected = Boolean(activeLog && String(activeLog.id) === String(entry.id));
+                            var isRed = entry.severity === "red";
+                            var unitShort =
+                              entry.unit && entry.unit !== "N/A" ? entry.unit.split(" ")[0] : "";
+                            var itemClasses = [
+                              "wlog-nav-item",
+                              isRed ? "wlog-nav-item--red" : "wlog-nav-item--yellow",
+                              wlogEditMode ? "wlog-nav-item--orange" : "",
+                              isSelected ? "wlog-nav-item--active" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ");
+
+                            return h(
+                              "div",
+                              {
+                                key: entry.id,
+                                role: "option",
+                                tabIndex: 0,
+                                "aria-selected": isSelected,
+                                className: itemClasses,
+                                onClick: function () {
+                                  setSelectedWlogId(entry.id);
+                                  if (wlogEditMode) {
+                                    openEditWarningLogModal(entry);
+                                  }
+                                },
+                                onKeyDown: function (e) {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    setSelectedWlogId(entry.id);
+                                    if (wlogEditMode) {
+                                      openEditWarningLogModal(entry);
+                                    }
+                                  }
+                                },
+                              },
+                              h(
+                                "div",
+                                { className: "wlog-nav-item-top" },
+                                h(
+                                  "span",
+                                  {
+                                    className: isRed
+                                      ? "wlog-sev-badge wlog-sev-badge--red"
+                                      : "wlog-sev-badge wlog-sev-badge--yellow",
+                                  },
+                                  isRed
+                                    ? "🚨 RED SOS"
+                                    : entry.isAdditionalCritical
+                                    ? "⚠ ADDITIONAL CRITICAL"
+                                    : "⚠ YELLOW"
+                                ),
+                                h(
+                                  "span",
+                                  { className: "wlog-nav-item-prio" },
+                                  "#" +
+                                    (idx + 1) +
+                                    " • P" +
+                                    (entry.priority || 1) +
+                                    (entry.updateCount > 1 ? " • ↻" + entry.updateCount : "")
+                                )
+                              ),
+                              h("div", { className: "wlog-nav-item-name" }, entry.measurementName),
+                              h(
+                                "div",
+                                { className: "wlog-nav-item-val" },
+                                "Value: " +
+                                  entry.triggerValue +
+                                  (unitShort && String(entry.triggerValue).indexOf(unitShort) === -1
+                                    ? " " + unitShort
+                                    : "") +
+                                  (entry.initialTriggerValue &&
+                                  String(entry.initialTriggerValue) !== String(entry.triggerValue)
+                                    ? " (from " + entry.initialTriggerValue + ")"
+                                    : "")
+                              ),
+                              h(
+                                "div",
+                                { className: "wlog-nav-item-meta" },
+                                h("span", null, "Sol " + (entry.sol || missionDay) + " • " + entry.timestamp),
+                                h("span", { className: "wlog-nav-item-status" }, entry.status || "Under Review"),
+                                h("span", { className: "wlog-source-badge" }, entry.source || "SIMULATED")
+                              ),
+                              h(
+                                "div",
+                                { className: "wlog-nav-item-quick-btns" },
+                                h(
+                                  "button",
+                                  {
+                                    type: "button",
+                                    className: "wlog-mini-btn wlog-mini-btn--edit",
+                                    onClick: function (ev) {
+                                      ev.stopPropagation();
+                                      setSelectedWlogId(entry.id);
+                                      openEditWarningLogModal(entry);
+                                    },
+                                  },
+                                  "✎ Edit"
+                                ),
+                                h(
+                                  "button",
+                                  {
+                                    type: "button",
+                                    className:
+                                      String(confirmDeleteWlogId) === String(entry.id)
+                                        ? "wlog-mini-btn wlog-mini-btn--confirm-del"
+                                        : "wlog-mini-btn wlog-mini-btn--del",
+                                    onClick: function (ev) {
+                                      ev.stopPropagation();
+                                      requestDeleteWarningLog(entry.id);
+                                    },
+                                  },
+                                  String(confirmDeleteWlogId) === String(entry.id)
+                                    ? "⚠ Press Again to Delete"
+                                    : "Delete"
+                                )
+                              )
+                            );
+                          })
+                        )
+                      ),
+                      activeLog
+                        ? (function () {
+                            var logEntry = activeLog;
+                            var isRed = logEntry.severity === "red";
+                            var stats = computeRecentRecordsStats(logEntry.recentRecords, logEntry.unit);
+                            var fmtStat = function (num) {
+                              if (!Number.isFinite(num)) return "N/A";
+                              return Math.abs(num) < 1 && num !== 0 ? num.toFixed(3) : Math.round(num * 100) / 100;
+                            };
+                            var unitShort =
+                              logEntry.unit && logEntry.unit !== "N/A"
+                                ? logEntry.unit.split(" ")[0]
+                                : "";
+                            var detailCardClass = [
+                              "wlog-detail-panel",
+                              isRed ? "wlog-card--red" : "wlog-card--yellow",
+                              wlogEditMode ? "wlog-card--editable" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ");
+
+                            return h(
+                              "article",
+                              { key: logEntry.id, className: detailCardClass, "aria-label": "Selected Warning Analysis" },
+                              h(
+                                "div",
+                                { className: "wlog-card-header" },
+                                h(
+                                  "div",
+                                  { className: "wlog-card-header-left" },
+                                  h(
+                                    "span",
+                                    {
+                                      className: isRed
+                                        ? "wlog-sev-badge wlog-sev-badge--red"
+                                        : "wlog-sev-badge wlog-sev-badge--yellow",
+                                    },
+                                    isRed
+                                      ? "🚨 RED SOS ALERT"
+                                      : logEntry.isAdditionalCritical
+                                      ? "⚠ WARNING — ADDITIONAL CRITICAL EVENT OCCURRED"
+                                      : "⚠ YELLOW WARNING"
+                                  ),
+                                  h(
+                                    "span",
+                                    { className: "wlog-prio-badge" },
+                                    "PRIORITY #" + (logEntry.priority || 1)
+                                  ),
+                                  h("h2", { className: "wlog-card-title" }, logEntry.measurementName),
+                                  h(
+                                    "span",
+                                    { className: "wlog-source-badge" },
+                                    logEntry.source || "SIMULATED"
+                                  ),
+                                  h(
+                                    "span",
+                                    { className: "wlog-trigger-val" },
+                                    "Current/Peak: " +
+                                      logEntry.triggerValue +
+                                      (unitShort && String(logEntry.triggerValue).indexOf(unitShort) === -1
+                                        ? " " + logEntry.unit
+                                        : "") +
+                                      (logEntry.initialTriggerValue &&
+                                      String(logEntry.initialTriggerValue) !== String(logEntry.triggerValue)
+                                        ? " (Initial: " + logEntry.initialTriggerValue + ")"
+                                        : "")
+                                  ),
+                                  logEntry.updateCount > 1
+                                    ? h(
+                                        "span",
+                                        { className: "wlog-status-pill" },
+                                        "↻ Auto-Updated " + logEntry.updateCount + "×"
+                                      )
+                                    : null,
+                                  h(
+                                    "label",
+                                    { className: "wlog-inline-status-wrap" },
+                                    h("span", { className: "wlog-inline-status-lbl" }, "Status:"),
+                                    h(
+                                      "select",
+                                      {
+                                        className: "wlog-inline-status-select",
+                                        "aria-label": "Change status for this warning",
+                                        value: logEntry.status || "Under Review",
+                                        onChange: function (ev) {
+                                          handleQuickUpdateWarningField(logEntry.id, { status: ev.target.value });
+                                        },
+                                      },
+                                      h("option", { value: "Active / Under Review" }, "Active / Under Review"),
+                                      h("option", { value: "Warning — Additional Critical Event" }, "Warning — Additional Critical Event"),
+                                      h("option", { value: "Under Review" }, "Under Review"),
+                                      h("option", { value: "Monitoring" }, "Monitoring"),
+                                      h("option", { value: "Resolved — Countermeasure Applied" }, "Resolved — Countermeasure Applied"),
+                                      h("option", { value: "Escalated to Flight Surgeon" }, "Escalated to Flight Surgeon"),
+                                      h("option", { value: "Critical — SOS Triggered" }, "Critical — SOS Triggered"),
+                                      h("option", { value: "False Positive / Sensor Drift" }, "False Positive / Sensor Drift")
+                                    )
+                                  ),
+                                  h(
+                                    "span",
+                                    { className: "wlog-timestamp" },
+                                    "Sol " + (logEntry.sol || missionDay) + " • " + logEntry.timestamp
+                                  )
+                                ),
+                                h(
+                                  "div",
+                                  { className: "wlog-header-actions" },
+                                  h(
+                                    "button",
+                                    {
+                                      type: "button",
+                                      className: "wlog-action-btn wlog-action-btn--edit",
+                                      onClick: function () {
+                                        openEditWarningLogModal(logEntry);
+                                      },
+                                    },
+                                    "✎ EDIT THIS WARNING"
+                                  ),
+                                  logEntry.specId && measurements && measurements[logEntry.specId]
+                                    ? h(
+                                        "button",
+                                        {
+                                          type: "button",
+                                          className: "wlog-action-btn",
+                                          onClick: function () {
+                                            openMeasurementFromWarning(logEntry.specId);
+                                          },
+                                        },
+                                        "OPEN PARAMETER"
+                                      )
+                                    : null,
+                                  h(
+                                    "button",
+                                    {
+                                      type: "button",
+                                      className:
+                                        String(confirmDeleteWlogId) === String(logEntry.id)
+                                          ? "wlog-action-btn wlog-action-btn--confirm-delete"
+                                          : "wlog-action-btn wlog-action-btn--delete",
+                                      onClick: function () {
+                                        requestDeleteWarningLog(logEntry.id);
+                                      },
+                                    },
+                                    String(confirmDeleteWlogId) === String(logEntry.id)
+                                      ? "⚠ PRESS AGAIN TO CONFIRM DELETE"
+                                      : "DELETE THIS WARNING"
+                                  )
+                                )
+                              ),
+                              h(
+                                "div",
+                                { className: "wlog-detail-body" },
+                                h(
+                                  "div",
+                                  { className: "wlog-reason-bar" },
+                                  h("strong", null, "Trigger Analysis: "),
+                                  logEntry.reason,
+                                  logEntry.thresholdRule
+                                    ? h(
+                                        "span",
+                                        { className: "wlog-threshold-inline" },
+                                        "  [Rule: " + logEntry.thresholdRule + "]"
+                                      )
+                                    : null
+                                ),
+                                h(
+                                  "div",
+                                  { className: "wlog-countermeasures-box" },
+                                  h(
+                                    "div",
+                                    { className: "wlog-pane-label" },
+                                    "POSSIBLE COUNTERMEASURES & RECOMMENDED ACTION PROTOCOL"
+                                  ),
+                                  h(
+                                    "div",
+                                    { className: "wlog-countermeasures-text" },
+                                    logEntry.countermeasures ||
+                                      getCountermeasuresForWarning(
+                                        logEntry.specId,
+                                        logEntry.isAdditionalCritical ? "red" : logEntry.severity
+                                      )
+                                  )
+                                ),
+                                h(
+                                  "div",
+                                  { className: "wlog-analysis-grid" },
+                                  h(
+                                    "div",
+                                    { className: "wlog-chart-pane" },
+                                    h(
+                                      "div",
+                                      { className: "wlog-pane-label" },
+                                      "RECENT TELEMETRY RECORDS AROUND WARNING (" +
+                                        (Array.isArray(logEntry.recentRecords) ? logEntry.recentRecords.length : 0) +
+                                        " SAMPLES CAPTURED)"
+                                    ),
+                                    Array.isArray(logEntry.recentRecords) && logEntry.recentRecords.length > 0
+                                      ? logEntry.chartType === "column"
+                                        ? h(MeasurementColumnChartSvg, {
+                                            series: logEntry.recentRecords,
+                                            labels: logEntry.recentLabels,
+                                            unit: logEntry.unit,
+                                            mini: false,
+                                            isOrange: wlogEditMode,
+                                            alertLevel: logEntry.severity,
+                                          })
+                                        : h(MeasurementLineChartSvg, {
+                                            series: logEntry.recentRecords,
+                                            seriesSecondary: logEntry.recentSecondary,
+                                            labels: logEntry.recentLabels,
+                                            unit: logEntry.unit,
+                                            mini: false,
+                                            isOrange: wlogEditMode,
+                                            alertLevel: logEntry.severity,
+                                          })
+                                      : h("p", { className: "muted-subtext" }, "No numeric time-series records attached."),
+                                    Array.isArray(logEntry.recentRecords) && logEntry.recentRecords.length > 0
+                                      ? h(
+                                          "div",
+                                          { className: "wlog-records-strip" },
+                                          logEntry.recentRecords.map(function (val, rIdx) {
+                                            var lbl =
+                                              Array.isArray(logEntry.recentLabels) && logEntry.recentLabels[rIdx]
+                                                ? logEntry.recentLabels[rIdx]
+                                                : "T-" + (logEntry.recentRecords.length - 1 - rIdx) + "s";
+                                            var secVal =
+                                              Array.isArray(logEntry.recentSecondary) &&
+                                              logEntry.recentSecondary[rIdx] !== undefined
+                                                ? "/" + logEntry.recentSecondary[rIdx]
+                                                : "";
+                                            var isLast = rIdx === logEntry.recentRecords.length - 1;
+                                            return h(
+                                              "div",
+                                              {
+                                                key: rIdx,
+                                                className: isLast
+                                                  ? "wlog-record-cell wlog-record-cell--trigger"
+                                                  : "wlog-record-cell",
+                                              },
+                                              h("span", { className: "wlog-record-lbl" }, lbl),
+                                              h(
+                                                "span",
+                                                { className: "wlog-record-val" },
+                                                String(val) + secVal + (unitShort ? " " + unitShort : "")
+                                              )
+                                            );
+                                          })
+                                        )
+                                      : null
+                                  ),
+                                  h(
+                                    "div",
+                                    { className: "wlog-stats-pane" },
+                                    h("div", { className: "wlog-pane-label" }, "WINDOW STATISTICAL ANALYSIS"),
+                                    stats
+                                      ? h(
+                                          "div",
+                                          { className: "wlog-stats-boxes" },
+                                          h(
+                                            "div",
+                                            { className: "wlog-stat-cell" },
+                                            h("span", { className: "wlog-stat-k" }, "Window Min"),
+                                            h("span", { className: "wlog-stat-v" }, fmtStat(stats.min) + " " + unitShort)
+                                          ),
+                                          h(
+                                            "div",
+                                            { className: "wlog-stat-cell" },
+                                            h("span", { className: "wlog-stat-k" }, "Window Max"),
+                                            h("span", { className: "wlog-stat-v" }, fmtStat(stats.max) + " " + unitShort)
+                                          ),
+                                          h(
+                                            "div",
+                                            { className: "wlog-stat-cell" },
+                                            h("span", { className: "wlog-stat-k" }, "Window Mean"),
+                                            h("span", { className: "wlog-stat-v" }, fmtStat(stats.mean) + " " + unitShort)
+                                          ),
+                                          h(
+                                            "div",
+                                            { className: "wlog-stat-cell" },
+                                            h("span", { className: "wlog-stat-k" }, "Net Change (Δ)"),
+                                            h(
+                                              "span",
+                                              { className: "wlog-stat-v" },
+                                              (stats.netDelta >= 0 ? "+" : "") + fmtStat(stats.netDelta) + " " + unitShort
+                                            )
+                                          ),
+                                          h(
+                                            "div",
+                                            { className: "wlog-stat-cell wlog-stat-cell--wide" },
+                                            h("span", { className: "wlog-stat-k" }, "Max Step Rate (Peak Δ/step)"),
+                                            h("span", { className: "wlog-stat-v" }, fmtStat(stats.maxStepDelta) + " " + unitShort)
+                                          )
+                                        )
+                                      : null,
+                                    h(
+                                      "div",
+                                      { className: "wlog-snapshot-box" },
+                                      h("div", { className: "wlog-pane-label" }, "CONCURRENT VITALS AT TRIGGER"),
+                                      h("div", { className: "wlog-snapshot-text" }, logEntry.concurrentSnapshot || "N/A")
+                                    ),
+                                    h(
+                                      "div",
+                                      { className: "wlog-notes-box" },
+                                      h("div", { className: "wlog-pane-label" }, "CLINICAL & FLIGHT SURGEON ANALYSIS NOTES"),
+                                      h(
+                                        "p",
+                                        { className: "wlog-notes-text" },
+                                        logEntry.analysisNotes || "No analysis notes entered yet. Click Edit to add findings."
+                                      )
+                                    )
+                                  )
+                                )
+                              )
+                            );
+                          })()
+                        : null
+                    )
+              );
+            })()
           : h(
               "main",
               { className: "dash-groundcontrol" },
@@ -4945,7 +10280,57 @@
                     ),
                   ]
                 : [
-                    activeTab === "ground-control"
+                    activeTab === "measurements"
+                      ? [
+                          h(
+                            "button",
+                            {
+                              key: "meas-test-warn",
+                              type: "button",
+                              className: "dash-action-btn",
+                              onClick: triggerTestAlert,
+                            },
+                            "TEST WARNINGS"
+                          ),
+                          h(
+                            "button",
+                            {
+                              key: "meas-edit",
+                              type: "button",
+                              className: measEditMode
+                                ? "dash-action-btn dash-action-btn--orange"
+                                : "dash-action-btn",
+                              onClick: toggleMeasEditMode,
+                            },
+                            measEditMode ? "EDIT MODE: ON" : "EDIT"
+                          ),
+                        ]
+                      : activeTab === "warning-log"
+                      ? [
+                          h(
+                            "button",
+                            {
+                              key: "wlog-test-warn",
+                              type: "button",
+                              className: "dash-action-btn",
+                              onClick: triggerTestAlert,
+                            },
+                            "TEST WARNINGS"
+                          ),
+                          h(
+                            "button",
+                            {
+                              key: "wlog-edit",
+                              type: "button",
+                              className: wlogEditMode
+                                ? "dash-action-btn dash-action-btn--orange"
+                                : "dash-action-btn",
+                              onClick: toggleWlogEditMode,
+                            },
+                            wlogEditMode ? "EDIT MODE: ON" : "EDIT"
+                          ),
+                        ]
+                      : activeTab === "ground-control"
                       ? h(
                           "button",
                           {
@@ -4987,7 +10372,7 @@
                               className: "dash-action-btn",
                               onClick: triggerTestAlert,
                             },
-                            "TEST ALERT"
+                            "TEST WARNINGS"
                           ),
                         ]
                       : null,
@@ -5000,6 +10385,346 @@
             )
           : null
       ),
+      measModalMode === "view" && selectedMeasId && measurements[selectedMeasId]
+        ? (function () {
+            var item = measurements[selectedMeasId];
+            var modalAlert = getEffectiveMeasurementAlertLevel(item);
+            var unitSuffix =
+              item.unit && item.unit !== "N/A" && String(item.value).indexOf(item.unit.split(" ")[0]) === -1
+                ? " " + item.unit
+                : "";
+            return h(
+              "div",
+              {
+                className: "modal-backdrop",
+                role: "dialog",
+                "aria-modal": "true",
+                "aria-labelledby": "meas-view-title",
+                onClick: function (e) {
+                  if (e.target === e.currentTarget) setMeasModalMode(null);
+                },
+              },
+              h(
+                "div",
+                {
+                  className:
+                    modalAlert === "red"
+                      ? "modal-card meas-modal-card meas-modal-card--red"
+                      : modalAlert === "yellow"
+                      ? "modal-card meas-modal-card meas-modal-card--yellow"
+                      : "modal-card meas-modal-card meas-modal-card--blue",
+                },
+                h(
+                  "div",
+                  {
+                    className:
+                      modalAlert === "red"
+                        ? "meas-modal-header meas-modal-header--red"
+                        : modalAlert === "yellow"
+                        ? "meas-modal-header meas-modal-header--yellow"
+                        : "meas-modal-header meas-modal-header--blue",
+                  },
+                  h(
+                    "div",
+                    null,
+                    h("span", { className: "meas-modal-kicker" }, "MEASUREMENT DATA DISPLAY"),
+                    h("h2", { id: "meas-view-title", className: "meas-modal-title" }, item.name)
+                  ),
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className: "meas-modal-close",
+                      "aria-label": "Close measurement display",
+                      onClick: function () {
+                        setMeasModalMode(null);
+                      },
+                    },
+                    "×"
+                  )
+                ),
+                h(
+                  "div",
+                  { className: "meas-modal-body" },
+                  h(
+                    "div",
+                    {
+                      className:
+                        modalAlert === "red"
+                          ? "meas-display-readout meas-display-readout--red"
+                          : modalAlert === "yellow"
+                          ? "meas-display-readout meas-display-readout--yellow"
+                          : "meas-display-readout",
+                    },
+                    h("div", { className: "meas-display-label" }, "CURRENT RECORDED DATA"),
+                    h("div", { className: "meas-display-big-value" }, String(item.value) + unitSuffix),
+                    h("div", { className: "meas-display-rep" }, "Representation: " + item.representation)
+                  ),
+                  item.chartType === "line" && Array.isArray(item.series)
+                    ? h(
+                        "div",
+                        { className: "meas-chart-box" },
+                        h(MeasurementLineChartSvg, {
+                          series: item.series,
+                          seriesSecondary: item.seriesSecondary,
+                          labels: item.seriesLabels,
+                          unit: item.unit,
+                          mini: false,
+                          isOrange: false,
+                          alertLevel: modalAlert,
+                        }),
+                        h(
+                          "div",
+                          { className: "meas-series-caption" },
+                          "Time-Series Values: [" + item.series.join(", ") + "]"
+                        )
+                      )
+                    : item.chartType === "column" && Array.isArray(item.series)
+                    ? h(
+                        "div",
+                        { className: "meas-chart-box" },
+                        h(MeasurementColumnChartSvg, {
+                          series: item.series,
+                          labels: item.seriesLabels,
+                          unit: item.unit,
+                          mini: false,
+                          isOrange: false,
+                          alertLevel: modalAlert,
+                        }),
+                        h(
+                          "div",
+                          { className: "meas-series-caption" },
+                          "Column Series Values: [" + item.series.join(", ") + "]"
+                        )
+                      )
+                    : null,
+                  h(
+                    "div",
+                    { className: "meas-spec-grid" },
+                    h(
+                      "div",
+                      { className: "meas-spec-cell" },
+                      h("span", { className: "meas-spec-label" }, "Name of data"),
+                      h("span", { className: "meas-spec-val" }, item.name)
+                    ),
+                    h(
+                      "div",
+                      { className: "meas-spec-cell" },
+                      h("span", { className: "meas-spec-label" }, "Unit of Measurement"),
+                      h("span", { className: "meas-spec-val" }, item.unit)
+                    ),
+                    h(
+                      "div",
+                      { className: "meas-spec-cell meas-spec-cell--full" },
+                      h("span", { className: "meas-spec-label" }, "Way of representation"),
+                      h("span", { className: "meas-spec-val" }, item.representation)
+                    )
+                  ),
+                  h(
+                    "div",
+                    { className: "modal-actions" },
+                    h(
+                      "button",
+                      {
+                        type: "button",
+                        className: "btn-primary",
+                        onClick: function () {
+                          setMeasModalMode(null);
+                        },
+                      },
+                      "Close"
+                    )
+                  )
+                )
+              )
+            );
+          })()
+        : null,
+      measModalMode === "edit" && draftMeas && measurements[draftMeas.id]
+        ? (function () {
+            var item = measurements[draftMeas.id];
+            var hasSeries = item.chartType === "line" || item.chartType === "column";
+            return h(
+              "div",
+              {
+                className: "modal-backdrop",
+                role: "dialog",
+                "aria-modal": "true",
+                "aria-labelledby": "meas-edit-title",
+                onClick: function (e) {
+                  if (e.target === e.currentTarget) setMeasModalMode(null);
+                },
+              },
+              h(
+                "form",
+                {
+                  className: "modal-card meas-modal-card meas-modal-card--orange",
+                  onSubmit: handleSaveMeasurementModal,
+                },
+                h(
+                  "div",
+                  { className: "meas-modal-header meas-modal-header--orange" },
+                  h(
+                    "div",
+                    null,
+                    h("span", { className: "meas-modal-kicker" }, "✎ EDIT DATA POINT"),
+                    h("h2", { id: "meas-edit-title", className: "meas-modal-title" }, item.name)
+                  ),
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className: "meas-modal-close",
+                      "aria-label": "Close edit dialog",
+                      onClick: function () {
+                        setMeasModalMode(null);
+                      },
+                    },
+                    "×"
+                  )
+                ),
+                h(
+                  "div",
+                  { className: "meas-modal-body" },
+                  h(
+                    "div",
+                    { className: "meas-spec-grid", style: { marginBottom: "1rem" } },
+                    h(
+                      "div",
+                      { className: "meas-spec-cell" },
+                      h("span", { className: "meas-spec-label" }, "Data Type"),
+                      h("span", { className: "meas-spec-val" }, item.dataType)
+                    ),
+                    h(
+                      "div",
+                      { className: "meas-spec-cell" },
+                      h("span", { className: "meas-spec-label" }, "Way of Representation"),
+                      h("span", { className: "meas-spec-val" }, item.representation)
+                    )
+                  ),
+                  h(
+                    "div",
+                    { className: "form-group" },
+                    h(
+                      "label",
+                      { className: "field-label", htmlFor: "meas-edit-val" },
+                      "Current Value (" + (item.unit !== "N/A" ? item.unit : item.dataType) + ")"
+                    ),
+                    h("input", {
+                      id: "meas-edit-val",
+                      type: "text",
+                      className: "text-input meas-orange-input",
+                      value: draftMeas.value,
+                      autoFocus: true,
+                      onChange: function (e) {
+                        var v = e.target.value;
+                        setDraftMeas(function (prev) {
+                          return Object.assign({}, prev, { value: v });
+                        });
+                      },
+                    })
+                  ),
+                  hasSeries
+                    ? h(
+                        "div",
+                        { className: "form-group" },
+                        h(
+                          "label",
+                          { className: "field-label", htmlFor: "meas-edit-series" },
+                          (item.chartType === "line" ? "Line Graph" : "Column Graph") +
+                            " Series Values (comma-separated numbers)"
+                        ),
+                        h("input", {
+                          id: "meas-edit-series",
+                          type: "text",
+                          className: "text-input meas-orange-input",
+                          value: draftMeas.seriesText,
+                          onChange: function (e) {
+                            var v = e.target.value;
+                            setDraftMeas(function (prev) {
+                              return Object.assign({}, prev, { seriesText: v });
+                            });
+                          },
+                        })
+                      )
+                    : null,
+                  h(
+                    "div",
+                    { className: "form-grid-2" },
+                    h(
+                      "div",
+                      { className: "form-group" },
+                      h("label", { className: "field-label", htmlFor: "meas-edit-unit" }, "Unit of Measurement"),
+                      h("input", {
+                        id: "meas-edit-unit",
+                        type: "text",
+                        className: "text-input meas-orange-input",
+                        value: draftMeas.unit,
+                        onChange: function (e) {
+                          var v = e.target.value;
+                          setDraftMeas(function (prev) {
+                            return Object.assign({}, prev, { unit: v });
+                          });
+                        },
+                      })
+                    ),
+                    h(
+                      "div",
+                      { className: "form-group" },
+                      h("label", { className: "field-label", htmlFor: "meas-edit-thresh" }, "Trigger Threshold (Δ Condition)"),
+                      h("input", {
+                        id: "meas-edit-thresh",
+                        type: "text",
+                        className: "text-input meas-orange-input",
+                        value: draftMeas.threshold,
+                        onChange: function (e) {
+                          var v = e.target.value;
+                          setDraftMeas(function (prev) {
+                            return Object.assign({}, prev, { threshold: v });
+                          });
+                        },
+                      })
+                    )
+                  ),
+                  h(
+                    "div",
+                    { className: "modal-actions" },
+                    h(
+                      "button",
+                      {
+                        type: "button",
+                        className: "btn-secondary",
+                        onClick: function () {
+                          handleResetSingleMeasurement(item.id);
+                        },
+                      },
+                      "Reset Default"
+                    ),
+                    h(
+                      "button",
+                      {
+                        type: "button",
+                        className: "btn-secondary",
+                        onClick: function () {
+                          setMeasModalMode(null);
+                        },
+                      },
+                      "Cancel"
+                    ),
+                    h(
+                      "button",
+                      {
+                        type: "submit",
+                        className: "btn-primary meas-btn-orange",
+                      },
+                      "Save Data"
+                    )
+                  )
+                )
+              )
+            );
+          })()
+        : null,
       vitalsSetupOpen
         ? h(
             "div",
@@ -5109,6 +10834,640 @@
                     onClick: saveVitalsSetup,
                   },
                   "Save"
+                )
+              )
+            )
+          )
+        : null,
+      testModalOpen
+        ? (function () {
+            var presetSpecs = MEASUREMENT_SPECS.filter(function (s) {
+              return Boolean(TEST_WARNING_PRESETS[s.id]);
+            }).sort(function (a, b) {
+              var pa = MEASUREMENT_PRIORITY_MAP[a.id] || 99;
+              var pb = MEASUREMENT_PRIORITY_MAP[b.id] || 99;
+              return pa - pb;
+            });
+            var selectedSpecItem = measurements[testTargetId] || measurements.heart_rate;
+            return h(
+              "div",
+              {
+                className: "modal-backdrop",
+                role: "dialog",
+                "aria-modal": "true",
+                "aria-labelledby": "test-warn-modal-title",
+                onClick: function (e) {
+                  if (e.target === e.currentTarget) setTestModalOpen(false);
+                },
+              },
+              h(
+                "div",
+                { className: "modal-card meas-modal-card meas-test-modal-card" },
+                h(
+                  "div",
+                  { className: "meas-modal-header meas-modal-header--blue" },
+                  h(
+                    "div",
+                    null,
+                    h("span", { className: "meas-modal-kicker" }, "DIAGNOSTIC & ALERT TESTING"),
+                    h("h2", { id: "test-warn-modal-title", className: "meas-modal-title" }, "SIMULATE WARNINGS & SOS ALERTS")
+                  ),
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className: "meas-modal-close",
+                      "aria-label": "Close warning simulator",
+                      onClick: function () {
+                        setTestModalOpen(false);
+                      },
+                    },
+                    "×"
+                  )
+                ),
+                h(
+                  "div",
+                  { className: "meas-modal-body" },
+                  h(
+                    "p",
+                    { className: "muted-subtext", style: { marginTop: 0, marginBottom: "0.85rem" } },
+                    "Choose any measurement below to simulate a Yellow Warning (held for at least 5 seconds + logged to Warning Log) or a Red SOS Alert (full-screen emergency alert)."
+                  ),
+                  h(
+                    "div",
+                    { className: "meas-test-selector-box" },
+                    h(
+                      "div",
+                      { className: "form-group", style: { marginBottom: "0.75rem" } },
+                      h(
+                        "label",
+                        { className: "field-label", htmlFor: "test-warning-select" },
+                        "1. Select Data Point to Test (Ordered by Priority)"
+                      ),
+                      h(
+                        "select",
+                        {
+                          id: "test-warning-select",
+                          className: "text-input",
+                          value: testTargetId,
+                          onChange: function (e) {
+                            setTestTargetId(e.target.value);
+                          },
+                        },
+                        presetSpecs.map(function (spec) {
+                          var prio = MEASUREMENT_PRIORITY_MAP[spec.id] || 99;
+                          var cur = measurements[spec.id];
+                          var curLevel = getEffectiveMeasurementAlertLevel(cur);
+                          var statusTag =
+                            curLevel === "red"
+                              ? " [ACTIVE RED SOS]"
+                              : curLevel === "yellow"
+                              ? " [ACTIVE YELLOW WARNING]"
+                              : "";
+                          return h(
+                            "option",
+                            { key: spec.id, value: spec.id },
+                            "Priority #" + prio + " — " + spec.name + " (" + spec.unit + ")" + statusTag
+                          );
+                        })
+                      )
+                    ),
+                    selectedSpecItem
+                      ? h(
+                          "div",
+                          { className: "meas-test-selected-info" },
+                          "Current Value: ",
+                          h("strong", null, String(selectedSpecItem.value)),
+                          " | Trigger Rule: ",
+                          h("span", null, selectedSpecItem.threshold)
+                        )
+                      : null,
+                    h(
+                      "div",
+                      { className: "meas-test-trigger-row" },
+                      h(
+                        "button",
+                        {
+                          type: "button",
+                          className: "meas-test-btn meas-test-btn--yellow",
+                          onClick: function () {
+                            simulateWarningPreset(testTargetId, "yellow");
+                          },
+                        },
+                        "⚠ DISPLAY YELLOW WARNING (" + (selectedSpecItem ? selectedSpecItem.name : "") + ")"
+                      ),
+                      h(
+                        "button",
+                        {
+                          type: "button",
+                          className: "meas-test-btn meas-test-btn--red",
+                          onClick: function () {
+                            simulateWarningPreset(testTargetId, "red");
+                          },
+                        },
+                        "🚨 TRIGGER RED SOS ALERT (" + (selectedSpecItem ? selectedSpecItem.name : "") + ")"
+                      )
+                    )
+                  ),
+                  h(
+                    "div",
+                    { className: "meas-test-quick-presets" },
+                    h(
+                      "button",
+                      {
+                        type: "button",
+                        className: "btn-secondary btn-small",
+                        onClick: simulatePriorityWarningStack,
+                      },
+                      "⚡ Simulate 3 Priority-Ordered Yellow Warnings"
+                    ),
+                    h(
+                      "button",
+                      {
+                        type: "button",
+                        className: "btn-secondary btn-small",
+                        onClick: simulateHighRadiationCascade,
+                      },
+                      "☢ High Radiation Cascade (Rad ↑ → Skin Temp, Suit Temp & HR ↑)"
+                    ),
+                    h(
+                      "button",
+                      {
+                        type: "button",
+                        className: "btn-secondary btn-small",
+                        onClick: simulateCardiacArrestCascade,
+                      },
+                      "🛑 Cardiac Arrest (HR = 0 → ECG Flatline + BP & SpO₂ Drop)"
+                    ),
+                    h(
+                      "button",
+                      {
+                        type: "button",
+                        className: "btn-secondary btn-small",
+                        onClick: clearAllSimulatedWarnings,
+                      },
+                      "↺ Reset All Vitals to Normal (Blue)"
+                    )
+                  ),
+                  h(
+                    "div",
+                    { className: "meas-test-list-title" },
+                    "Quick-Trigger List (All Testable Data Points by Priority):"
+                  ),
+                  h(
+                    "div",
+                    { className: "meas-test-list" },
+                    presetSpecs.map(function (spec) {
+                      var prio = MEASUREMENT_PRIORITY_MAP[spec.id] || 99;
+                      var item = measurements[spec.id];
+                      var level = getEffectiveMeasurementAlertLevel(item);
+                      return h(
+                        "div",
+                        {
+                          key: spec.id,
+                          className:
+                            level === "red"
+                              ? "meas-test-row meas-test-row--red"
+                              : level === "yellow"
+                              ? "meas-test-row meas-test-row--yellow"
+                              : "meas-test-row",
+                        },
+                        h(
+                          "div",
+                          { className: "meas-test-row-info" },
+                          h("span", { className: "meas-test-row-prio" }, "#" + prio),
+                          h("span", { className: "meas-test-row-name" }, spec.name),
+                          h(
+                            "span",
+                            { className: "meas-test-row-val" },
+                            item ? String(item.value) : ""
+                          )
+                        ),
+                        h(
+                          "div",
+                          { className: "meas-test-row-btns" },
+                          h(
+                            "button",
+                            {
+                              type: "button",
+                              className: "meas-test-mini-btn meas-test-mini-btn--yellow",
+                              onClick: function () {
+                                setTestTargetId(spec.id);
+                                simulateWarningPreset(spec.id, "yellow");
+                              },
+                            },
+                            "Yellow"
+                          ),
+                          h(
+                            "button",
+                            {
+                              type: "button",
+                              className: "meas-test-mini-btn meas-test-mini-btn--red",
+                              onClick: function () {
+                                setTestTargetId(spec.id);
+                                simulateWarningPreset(spec.id, "red");
+                              },
+                            },
+                            "Red SOS"
+                          ),
+                          level !== "normal"
+                            ? h(
+                                "button",
+                                {
+                                  type: "button",
+                                  className: "meas-test-mini-btn meas-test-mini-btn--reset",
+                                  onClick: function () {
+                                    handleResetSingleMeasurement(spec.id);
+                                  },
+                                },
+                                "Normal"
+                              )
+                            : null
+                        )
+                      );
+                    })
+                  ),
+                  h(
+                    "div",
+                    { className: "modal-actions", style: { marginTop: "0.9rem" } },
+                    h(
+                      "button",
+                      {
+                        type: "button",
+                        className: "btn-primary",
+                        onClick: function () {
+                          setTestModalOpen(false);
+                        },
+                      },
+                      "Done"
+                    )
+                  )
+                )
+              )
+            );
+          })()
+        : null,
+      editingLog
+        ? h(
+            "div",
+            {
+              className: "modal-backdrop",
+              role: "dialog",
+              "aria-modal": "true",
+              "aria-labelledby": "wlog-edit-modal-title",
+              onClick: function (e) {
+                if (e.target === e.currentTarget) setEditingLog(null);
+              },
+            },
+            h(
+              "form",
+              {
+                className: "modal-card meas-modal-card meas-modal-card--orange wlog-edit-modal-card",
+                onSubmit: handleSaveWarningLogModal,
+              },
+              h(
+                "div",
+                { className: "meas-modal-header meas-modal-header--orange" },
+                h(
+                  "div",
+                  null,
+                  h(
+                    "span",
+                    { className: "meas-modal-kicker" },
+                    editingLog.isNew ? "✎ ADD WARNING LOG RECORD" : "✎ EDIT WARNING LOG & RECENT DATA RECORDS"
+                  ),
+                  h(
+                    "h2",
+                    { id: "wlog-edit-modal-title", className: "meas-modal-title" },
+                    editingLog.measurementName + " (" + editingLog.id + ")"
+                  )
+                ),
+                h(
+                  "button",
+                  {
+                    type: "button",
+                    className: "meas-modal-close",
+                    "aria-label": "Close warning log editor",
+                    onClick: function () {
+                      setEditingLog(null);
+                    },
+                  },
+                  "×"
+                )
+              ),
+              h(
+                "div",
+                { className: "meas-modal-body" },
+                h(
+                  "div",
+                  { className: "form-grid-2" },
+                  h(
+                    "div",
+                    { className: "form-group" },
+                    h("label", { className: "field-label", htmlFor: "wlog-spec-select" }, "Parameter / Data Point"),
+                    h(
+                      "select",
+                      {
+                        id: "wlog-spec-select",
+                        className: "text-input meas-orange-input",
+                        value: editingLog.specId,
+                        onChange: function (e) {
+                          var newId = e.target.value;
+                          var foundSpec = MEASUREMENT_SPECS.find(function (s) {
+                            return s.id === newId;
+                          });
+                          setEditingLog(function (prev) {
+                            return Object.assign({}, prev, {
+                              specId: newId,
+                              measurementName: foundSpec ? foundSpec.name : prev.measurementName,
+                              unit: foundSpec ? foundSpec.unit : prev.unit,
+                              thresholdRule: foundSpec ? foundSpec.threshold : prev.thresholdRule,
+                              priorityText: String(MEASUREMENT_PRIORITY_MAP[newId] || prev.priorityText),
+                            });
+                          });
+                        },
+                      },
+                      MEASUREMENT_SPECS.map(function (s, idx) {
+                        return h("option", { key: s.id, value: s.id }, "#" + (idx + 1) + " — " + s.name + " (" + s.unit + ")");
+                      })
+                    )
+                  ),
+                  h(
+                    "div",
+                    { className: "form-group" },
+                    h("label", { className: "field-label", htmlFor: "wlog-severity-select" }, "Warning Severity"),
+                    h(
+                      "select",
+                      {
+                        id: "wlog-severity-select",
+                        className: "text-input meas-orange-input",
+                        value: editingLog.severity,
+                        onChange: function (e) {
+                          var v = e.target.value;
+                          setEditingLog(function (prev) {
+                            return Object.assign({}, prev, { severity: v });
+                          });
+                        },
+                      },
+                      h("option", { value: "yellow" }, "⚠ Yellow Warning (Concerning Change)"),
+                      h("option", { value: "red" }, "🚨 Red SOS Alert (Dangerous / Critical)")
+                    )
+                  )
+                ),
+                h(
+                  "div",
+                  { className: "form-grid-2" },
+                  h(
+                    "div",
+                    { className: "form-group" },
+                    h("label", { className: "field-label", htmlFor: "wlog-trigger-val" }, "Triggered Value"),
+                    h("input", {
+                      id: "wlog-trigger-val",
+                      type: "text",
+                      className: "text-input meas-orange-input",
+                      value: editingLog.triggerValue,
+                      onChange: function (e) {
+                        var v = e.target.value;
+                        setEditingLog(function (prev) {
+                          return Object.assign({}, prev, { triggerValue: v });
+                        });
+                      },
+                    })
+                  ),
+                  h(
+                    "div",
+                    { className: "form-group" },
+                    h("label", { className: "field-label", htmlFor: "wlog-status-select" }, "Analysis Review Status"),
+                    h(
+                      "select",
+                      {
+                        id: "wlog-status-select",
+                        className: "text-input meas-orange-input",
+                        value: editingLog.status,
+                        onChange: function (e) {
+                          var v = e.target.value;
+                          setEditingLog(function (prev) {
+                            return Object.assign({}, prev, { status: v });
+                          });
+                        },
+                      },
+                      h("option", { value: "Active / Under Review" }, "Active / Under Review"),
+                      h("option", { value: "Warning — Additional Critical Event" }, "Warning — Additional Critical Event"),
+                      h("option", { value: "Under Review" }, "Under Review"),
+                      h("option", { value: "Monitoring" }, "Monitoring"),
+                      h("option", { value: "Resolved — Countermeasure Applied" }, "Resolved — Countermeasure Applied"),
+                      h("option", { value: "Escalated to Flight Surgeon" }, "Escalated to Flight Surgeon"),
+                      h("option", { value: "Critical — SOS Triggered" }, "Critical — SOS Triggered"),
+                      h("option", { value: "False Positive / Sensor Drift" }, "False Positive / Sensor Drift")
+                    )
+                  )
+                ),
+                h(
+                  "div",
+                  { className: "form-grid-2" },
+                  h(
+                    "div",
+                    { className: "form-group" },
+                    h("label", { className: "field-label", htmlFor: "wlog-timestamp" }, "Timestamp"),
+                    h("input", {
+                      id: "wlog-timestamp",
+                      type: "text",
+                      className: "text-input meas-orange-input",
+                      value: editingLog.timestamp,
+                      onChange: function (e) {
+                        var v = e.target.value;
+                        setEditingLog(function (prev) {
+                          return Object.assign({}, prev, { timestamp: v });
+                        });
+                      },
+                    })
+                  ),
+                  h(
+                    "div",
+                    { className: "form-group" },
+                    h("label", { className: "field-label", htmlFor: "wlog-sol" }, "Mission Sol"),
+                    h("input", {
+                      id: "wlog-sol",
+                      type: "number",
+                      className: "text-input meas-orange-input",
+                      value: editingLog.solText,
+                      onChange: function (e) {
+                        var v = e.target.value;
+                        setEditingLog(function (prev) {
+                          return Object.assign({}, prev, { solText: v });
+                        });
+                      },
+                    })
+                  )
+                ),
+                h(
+                  "div",
+                  { className: "form-group" },
+                  h("label", { className: "field-label", htmlFor: "wlog-reason" }, "Trigger Reason & Description"),
+                  h("input", {
+                    id: "wlog-reason",
+                    type: "text",
+                    className: "text-input meas-orange-input",
+                    value: editingLog.reason,
+                    onChange: function (e) {
+                      var v = e.target.value;
+                      setEditingLog(function (prev) {
+                        return Object.assign({}, prev, { reason: v });
+                      });
+                    },
+                  })
+                ),
+                h(
+                  "div",
+                  { className: "form-group" },
+                  h(
+                    "label",
+                    { className: "field-label", htmlFor: "wlog-countermeasures" },
+                    "Possible Countermeasures & Recommended Action Protocol"
+                  ),
+                  h("textarea", {
+                    id: "wlog-countermeasures",
+                    rows: 2,
+                    className: "text-input meas-orange-input",
+                    style: { resize: "vertical", minHeight: "3.2rem" },
+                    value: editingLog.countermeasures || "",
+                    onChange: function (e) {
+                      var v = e.target.value;
+                      setEditingLog(function (prev) {
+                        return Object.assign({}, prev, { countermeasures: v });
+                      });
+                    },
+                  })
+                ),
+                h(
+                  "div",
+                  { className: "form-group" },
+                  h(
+                    "label",
+                    { className: "field-label", htmlFor: "wlog-recent-records" },
+                    "Recent Data Records Around Warning (comma-separated values leading up to trigger)"
+                  ),
+                  h("input", {
+                    id: "wlog-recent-records",
+                    type: "text",
+                    className: "text-input meas-orange-input",
+                    value: editingLog.recentRecordsText,
+                    onChange: function (e) {
+                      var v = e.target.value;
+                      setEditingLog(function (prev) {
+                        return Object.assign({}, prev, { recentRecordsText: v });
+                      });
+                    },
+                  })
+                ),
+                h(
+                  "div",
+                  { className: "form-grid-2" },
+                  h(
+                    "div",
+                    { className: "form-group" },
+                    h(
+                      "label",
+                      { className: "field-label", htmlFor: "wlog-recent-labels" },
+                      "Time Labels for Recent Records (comma-separated)"
+                    ),
+                    h("input", {
+                      id: "wlog-recent-labels",
+                      type: "text",
+                      className: "text-input meas-orange-input",
+                      value: editingLog.recentLabelsText,
+                      onChange: function (e) {
+                        var v = e.target.value;
+                        setEditingLog(function (prev) {
+                          return Object.assign({}, prev, { recentLabelsText: v });
+                        });
+                      },
+                    })
+                  ),
+                  h(
+                    "div",
+                    { className: "form-group" },
+                    h(
+                      "label",
+                      { className: "field-label", htmlFor: "wlog-concurrent" },
+                      "Concurrent Vitals Snapshot"
+                    ),
+                    h("input", {
+                      id: "wlog-concurrent",
+                      type: "text",
+                      className: "text-input meas-orange-input",
+                      value: editingLog.concurrentSnapshot,
+                      onChange: function (e) {
+                        var v = e.target.value;
+                        setEditingLog(function (prev) {
+                          return Object.assign({}, prev, { concurrentSnapshot: v });
+                        });
+                      },
+                    })
+                  )
+                ),
+                h(
+                  "div",
+                  { className: "form-group" },
+                  h(
+                    "label",
+                    { className: "field-label", htmlFor: "wlog-notes" },
+                    "Clinical & Engineering Analysis Notes"
+                  ),
+                  h("textarea", {
+                    id: "wlog-notes",
+                    rows: 3,
+                    className: "text-input meas-orange-input",
+                    style: { resize: "vertical", minHeight: "4.2rem" },
+                    value: editingLog.analysisNotes,
+                    onChange: function (e) {
+                      var v = e.target.value;
+                      setEditingLog(function (prev) {
+                        return Object.assign({}, prev, { analysisNotes: v });
+                      });
+                    },
+                  })
+                ),
+                h(
+                  "div",
+                  { className: "modal-actions" },
+                  !editingLog.isNew
+                    ? h(
+                        "button",
+                        {
+                          type: "button",
+                          className:
+                            String(confirmDeleteWlogId) === String(editingLog.id)
+                              ? "btn-secondary wlog-modal-btn--confirm-delete"
+                              : "btn-secondary",
+                          onClick: function () {
+                            requestDeleteWarningLog(editingLog.id);
+                          },
+                        },
+                        String(confirmDeleteWlogId) === String(editingLog.id)
+                          ? "⚠ Press Again to Confirm Delete"
+                          : "Delete Entry"
+                      )
+                    : null,
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className: "btn-secondary",
+                      onClick: function () {
+                        setEditingLog(null);
+                      },
+                    },
+                    "Cancel"
+                  ),
+                  h(
+                    "button",
+                    {
+                      type: "submit",
+                      className: "btn-primary meas-btn-orange",
+                    },
+                    "Save Warning Log"
+                  )
                 )
               )
             )

@@ -18,6 +18,19 @@ crew information, local threshold-based triage, a LocalStorage queue named
 as a 0 ms boundary; the current web demo calls the Cloud Run API directly when
 connected rather than hosting a separate onboard server.
 
+The installable web-app shell is described by `manifest.json`; `sw.js` caches
+only same-origin frontend assets and does not intercept or cache Cloud Run API
+responses. In local browser verification, the service-worker registration
+remained inactive and created no cache, so app-shell offline behavior is not
+confirmed.
+
+The dashboard also includes a 36-item **Measurements** catalogue and a
+**Warning Log** with search, filters, and per-event analysis. Catalogue
+simulations, sample warning history, and alert cascades are labeled as
+simulated and stored in browser-local state; they are not clinical records in
+Firestore. Live profile/history data and submitted vitals continue to use the
+Cloud Run API described below.
+
 ### DSN latency boundary
 
 The dashboard displays a simulated **20–45 minute** Deep Space Network
@@ -156,7 +169,9 @@ npx serve .
 
 Then open <http://localhost:8080>. React 18 is loaded from a CDN, so the page
 requires network access to load React even when the API connection is toggled
-offline.
+offline. The service worker is configured to cache the local app shell, but
+its activation was not observed during verification. It does not cache
+clinical API responses or make the CDN-hosted React runtime available offline.
 
 ### Backend
 
@@ -182,6 +197,9 @@ not commit credential files.
   index.html
   app.js
   styles.css
+  manifest.json
+  icon.svg
+  sw.js
   README.md
   seed_demo_data.py
   hackaton/

@@ -1,0 +1,17 @@
+{
+  "name": "Astronaut Health Monitoring System",
+  "short_name": "Astronaut Health",
+  "description": "Astronaut health monitoring, onboard triage, and telemetry.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#060a12",
+  "theme_color": "#155b79",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
